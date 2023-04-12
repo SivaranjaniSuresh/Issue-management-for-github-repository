@@ -96,6 +96,18 @@ class Neo4jGitHub:
         query = "MERGE (m:Milestone {MilestoneType: $milestone_type})"
         tx.run(query, milestone_type=milestone_type)
 
+    def create_comment(self, comment_id, comment_body):
+        try:
+            with self.driver.session(database="neo4j") as session:
+                session.execute_write(self._create_comment, comment_id, comment_body)
+        except ServiceUnavailable as e:
+            logging.error(f"ServiceUnavailable exception occurred: {e}")
+
+    @staticmethod
+    def _create_comment(tx, comment_id, comment_body):
+        query = "MERGE (c:Comment {CommentId: $comment_id}) ON CREATE SET c.CommentBody = $comment_body"
+        tx.run(query, comment_id=comment_id, comment_body=comment_body)
+
     ####################################################################################################################################
     ### Create Relationships
     ####################################################################################################################################
@@ -282,6 +294,74 @@ class Neo4jGitHub:
             label_type=label_type,
         )
 
+    def user_commented_on_issue(
+        self, github_id, issue_owner, issue_repo_name, issue_number, comment_id
+    ):
+        try:
+            with self.driver.session(database="neo4j") as session:
+                session.execute_write(
+                    self._create_user_comment_relationship,
+                    github_id,
+                    issue_owner,
+                    issue_repo_name,
+                    issue_number,
+                    comment_id,
+                )
+        except ServiceUnavailable as e:
+            logging.error(f"ServiceUnavailable exception occurred: {e}")
+
+    @staticmethod
+    def _create_user_comment_relationship(
+        tx, github_id, issue_owner, issue_repo_name, issue_number, comment_id
+    ):
+        query = (
+            "MATCH (u:User {GithubId: $github_id}), "
+            "(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}), "
+            "(c:Comment {CommentId: $comment_id}) "
+            "MERGE (u)-[rel:COMMENTED]->(c)-[:COMMENT_ON]->(i) "
+            "ON CREATE SET rel.uid = u.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) + '-' + toString(c.CommentId), rel.Timestamp = timestamp()"
+        )
+        tx.run(
+            query,
+            github_id=github_id,
+            issue_owner=issue_owner,
+            issue_repo_name=issue_repo_name,
+            issue_number=issue_number,
+            comment_id=comment_id,
+        )
+
+    def user_reacted_on_comment(
+        self, github_id, comment_id, reaction_type
+    ):
+        try:
+            with self.driver.session(database="neo4j") as session:
+                session.execute_write(
+                    self._create_user_comment_reaction_relationship,
+                    github_id,
+                    comment_id,
+                    reaction_type,
+                )
+        except ServiceUnavailable as e:
+            logging.error(f"ServiceUnavailable exception occurred: {e}")
+
+    @staticmethod
+    def _create_user_comment_reaction_relationship(
+        tx, github_id, comment_id, reaction_type
+    ):
+        query = (
+            "MATCH (u:User {GithubId: $github_id}), "
+            "(c:Comment {CommentId: $comment_id}), "
+            "(r:Reaction {ReactionName: $reaction_type}) "
+            "MERGE (u)-[rel:REACTED]->(r)-[:REACTION_ON]->(c) "
+            "ON CREATE SET rel.uid = u.GithubId + '-' + toString(c.CommentId) + '-' + r.ReactionName, rel.Timestamp = timestamp()"
+        )
+
+        tx.run(
+            query,
+            github_id=github_id,
+            comment_id=comment_id,
+            reaction_type=reaction_type,
+        )
     ####################################################################################################################################
     ### Remove Nodes
     ####################################################################################################################################
@@ -358,6 +438,21 @@ class Neo4jGitHub:
     def _remove_milestone(tx, milestone_type):
         query = "MATCH (m:Milestone {MilestoneType: $milestone_type}) DETACH DELETE m"
         tx.run(query, milestone_type=milestone_type)
+
+    def remove_comment(self, comment_id):
+        try:
+            with self.driver.session(database="neo4j") as session:
+                session.execute_write(self._remove_comment, comment_id)
+        except ServiceUnavailable as e:
+            logging.error(f"ServiceUnavailable exception occurred: {e}")
+
+    @staticmethod
+    def _remove_comment(tx, comment_id):
+        query = """
+        MATCH (c:Comment {CommentId: $comment_id})
+        DETACH DELETE c
+        """
+        tx.run(query, comment_id=comment_id)
 
     ####################################################################################################################################
     ### Remove Relationships
@@ -532,4 +627,66 @@ class Neo4jGitHub:
             issue_repo_name=issue_repo_name,
             issue_number=issue_number,
             label_type=label_type,
+        )
+
+    def user_removed_comment(
+        self, github_id, issue_owner, issue_repo_name, issue_number, comment_id
+    ):
+        try:
+            with self.driver.session(database="neo4j") as session:
+                session.execute_write(
+                    self._remove_user_comment_relationship,
+                    github_id,
+                    issue_owner,
+                    issue_repo_name,
+                    issue_number,
+                    comment_id,
+                )
+        except ServiceUnavailable as e:
+            logging.error(f"ServiceUnavailable exception occurred: {e}")
+
+    @staticmethod
+    def _remove_user_comment_relationship(
+        tx, github_id, issue_owner, issue_repo_name, issue_number, comment_id
+    ):
+        query = (
+            "MATCH (u:User {GithubId: $github_id})-[rel:COMMENTED]->(c:Comment {CommentId: $comment_id})-[:COMMENT_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
+            "DELETE rel"
+        )
+        tx.run(
+            query,
+            github_id=github_id,
+            issue_owner=issue_owner,
+            issue_repo_name=issue_repo_name,
+            issue_number=issue_number,
+            comment_id=comment_id,
+        )
+
+    def user_removed_reaction(
+        self, github_id, comment_id, reaction_type
+    ):
+        try:
+            with self.driver.session(database="neo4j") as session:
+                session.execute_write(
+                    self._remove_user_comment_reaction_relationship,
+                    github_id,
+                    comment_id,
+                    reaction_type,
+                )
+        except ServiceUnavailable as e:
+            logging.error(f"ServiceUnavailable exception occurred: {e}")
+
+    @staticmethod
+    def _remove_user_comment_reaction_relationship(
+        tx, github_id, comment_id, reaction_type
+    ):
+        query = (
+            "MATCH (u:User {GithubId: $github_id})-[rel:REACTED]->(r:Reaction {ReactionName: $reaction_type})-[:REACTION_ON]->(c:Comment {CommentId: $comment_id}) "
+            "DELETE rel"
+        )
+        tx.run(
+            query,
+            github_id=github_id,
+            comment_id=comment_id,
+            reaction_type=reaction_type,
         )

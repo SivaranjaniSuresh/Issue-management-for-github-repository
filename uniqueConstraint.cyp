@@ -17,3 +17,8 @@ REQUIRE l.LabelType IS UNIQUE
 CREATE CONSTRAINT milestone_unique 
 FOR (m:Milestone) 
 REQUIRE m.MilestoneType IS UNIQUE
+
+CREATE CONSTRAINT comment_id_unique
+FOR (c:Comment)
+REQUIRE c.CommentId IS UNIQUE
+
