@@ -330,9 +330,7 @@ class Neo4jGitHub:
             comment_id=comment_id,
         )
 
-    def user_reacted_on_comment(
-        self, github_id, comment_id, reaction_type
-    ):
+    def user_reacted_on_comment(self, github_id, comment_id, reaction_type):
         try:
             with self.driver.session(database="neo4j") as session:
                 session.execute_write(
@@ -362,6 +360,7 @@ class Neo4jGitHub:
             comment_id=comment_id,
             reaction_type=reaction_type,
         )
+
     ####################################################################################################################################
     ### Remove Nodes
     ####################################################################################################################################
@@ -662,9 +661,7 @@ class Neo4jGitHub:
             comment_id=comment_id,
         )
 
-    def user_removed_reaction(
-        self, github_id, comment_id, reaction_type
-    ):
+    def user_removed_reaction(self, github_id, comment_id, reaction_type):
         try:
             with self.driver.session(database="neo4j") as session:
                 session.execute_write(
