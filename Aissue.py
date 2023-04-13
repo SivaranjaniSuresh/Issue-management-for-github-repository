@@ -18,8 +18,9 @@ selected_repo = None
 issues = None
 selected_issue_number = None
 
+
 def get_all_pages(url):
-    headers = {'Authorization': f'token {github_token}'}
+    headers = {"Authorization": f"token {github_token}"}
     page = 1
     items = []
     while True:
@@ -34,6 +35,7 @@ def get_all_pages(url):
             break
     return items
 
+
 def get_repositories(github_id):
     user_url = f"https://api.github.com/users/{github_id}/repos"
     org_url = f"https://api.github.com/orgs/{github_id}/repos"
@@ -44,6 +46,7 @@ def get_repositories(github_id):
     repos = user_repos + org_repos
 
     return [repo["name"] for repo in repos]
+
 
 if github_id:
     repositories = get_repositories(github_id)
@@ -58,7 +61,9 @@ if selected_repo:
     issue_data = get_all_pages(issue_url)
 
     if issue_data:
-        issues = [{"number": issue["number"], "title": issue["title"]} for issue in issue_data]
+        issues = [
+            {"number": issue["number"], "title": issue["title"]} for issue in issue_data
+        ]
 
 if selected_repo:
     if issues:
@@ -72,7 +77,9 @@ if selected_repo:
 
 if selected_issue_number:
     single_issue_url = f"https://api.github.com/repos/{github_id}/{selected_repo}/issues/{selected_issue_number}"
-    single_issue_response = requests.get(single_issue_url, headers={'Authorization': f'token {github_token}'})
+    single_issue_response = requests.get(
+        single_issue_url, headers={"Authorization": f"token {github_token}"}
+    )
     single_issue_data = single_issue_response.json()
 
     if single_issue_response.status_code == 200:
@@ -103,15 +110,12 @@ if selected_issue_number:
 """
 
         # Add CSS to resize image and ensure it fits inside the border
-        issue_details = issue_details.replace('<img ', '<img style="max-width: 100%; height: auto; margin: 10px 0;" ')
+        issue_details = issue_details.replace(
+            "<img ", '<img style="max-width: 100%; height: auto; margin: 10px 0;" '
+        )
 
         issue_details += "</div>"
-        
+
         st.markdown(issue_details, unsafe_allow_html=True)
     else:
         st.error("Unable to fetch issue details. Please try again.")
-
-
-
-
-
