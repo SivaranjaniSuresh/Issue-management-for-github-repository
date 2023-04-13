@@ -217,8 +217,10 @@ class Neo4jGitHub:
             "MATCH (u:User {GithubId: $github_id}), "
             "(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}), "
             "(r:Reaction {ReactionName: $reaction_name}) "
-            "MERGE (u)-[rel:REACTED]->(r)-[:REACTION_ON]->(i) "
-            "ON CREATE SET rel.uid = u.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) + '-' + r.ReactionName, rel.Timestamp = timestamp()"
+            "MERGE (u)-[rel:REACTED]->(r) "
+            "ON CREATE SET rel.uid = u.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) + '-' + r.ReactionName, rel.Timestamp = timestamp() "
+            "MERGE (r)-[rel2:REACTION_ON]->(i) "
+            "ON CREATE SET rel2.uid = r.ReactionName + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber), rel2.Timestamp = timestamp()"
         )
         tx.run(
             query,
@@ -253,8 +255,10 @@ class Neo4jGitHub:
             "MATCH (u:User {GithubId: $github_id}), "
             "(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}), "
             "(m:Milestone {MilestoneType: $milestone_type}) "
-            "MERGE (u)-[rel:ADDED_MILESTONE]->(m)-[:MILESTONE_ON]->(i) "
-            "ON CREATE SET rel.uid = u.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) + '-' + m.MilestoneType, rel.Timestamp = timestamp()"
+            "MERGE (u)-[rel:ADDED_MILESTONE]->(m) "
+            "ON CREATE SET rel.uid = u.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) + '-' + m.MilestoneType, rel.Timestamp = timestamp() "
+            "MERGE (m)-[rel2:MILESTONE_ON]->(i) "
+            "ON CREATE SET rel2.uid = m.MilestoneType + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber), rel2.Timestamp = timestamp()"
         )
         tx.run(
             query,
@@ -320,8 +324,10 @@ class Neo4jGitHub:
             "MATCH (u:User {GithubId: $github_id}), "
             "(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}), "
             "(c:Comment {CommentId: $comment_id}) "
-            "MERGE (u)-[rel:COMMENTED]->(c)-[:COMMENT_ON]->(i) "
-            "ON CREATE SET rel.uid = u.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) + '-' + toString(c.CommentId), rel.Timestamp = timestamp()"
+            "MERGE (u)-[rel:COMMENTED]->(c) "
+            "ON CREATE SET rel.uid = u.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) + '-' + toString(c.CommentId), rel.Timestamp = timestamp() "
+            "MERGE (c)-[rel2:COMMENT_ON]->(i) "
+            "ON CREATE SET rel2.uid = c.CommentId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber), rel2.Timestamp = timestamp()"
         )
         tx.run(
             query,
@@ -559,8 +565,13 @@ class Neo4jGitHub:
         tx, github_id, issue_owner, issue_repo_name, issue_number, reaction_name
     ):
         query = (
-            "MATCH (u:User {GithubId: $github_id})-[rel:REACTED]->(r:Reaction {ReactionName: $reaction_name})-[:REACTION_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
-            "DELETE rel"
+            "MATCH (u:User {GithubId: $github_id})-[rel:REACTED]->(r:Reaction {ReactionName: $reaction_name}) "
+            "WHERE rel.uid = u.GithubId + '-' + $issue_owner + '-' + $issue_repo_name + '-' + toString($issue_number) + '-' + r.ReactionName "
+            "DELETE rel "
+            "WITH r "
+            "MATCH (r)-[rel2:REACTION_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
+            "WHERE rel2.uid = r.ReactionName + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) "
+            "DELETE rel2"
         )
         tx.run(
             query,
@@ -592,8 +603,13 @@ class Neo4jGitHub:
         tx, github_id, issue_owner, issue_repo_name, issue_number, milestone_type
     ):
         query = (
-            "MATCH (u:User {GithubId: $github_id})-[rel:ADDED_MILESTONE]->(m:Milestone {MilestoneType: $milestone_type})-[:MILESTONE_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
-            "DELETE rel"
+                "MATCH (u:User {GithubId: $github_id})-[rel:ADDED_MILESTONE]->(m:Milestone {MilestoneType: $milestone_type}) "
+                "WHERE rel.uid = u.GithubId + '-' + $issue_owner + '-' + $issue_repo_name + '-' + toString($issue_number) + '-' + m.MilestoneType "
+                "DELETE rel "
+                "WITH m "
+                "MATCH (m)-[rel2:MILESTONE_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
+                "WHERE rel2.uid = m.MilestoneType + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) "
+                "DELETE rel2"
         )
         tx.run(
             query,
@@ -656,8 +672,13 @@ class Neo4jGitHub:
         tx, github_id, issue_owner, issue_repo_name, issue_number, comment_id
     ):
         query = (
-            "MATCH (u:User {GithubId: $github_id})-[rel:COMMENTED]->(c:Comment {CommentId: $comment_id})-[:COMMENT_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
-            "DELETE rel"
+                "MATCH (u:User {GithubId: $github_id})-[rel:COMMENTED]->(c:Comment {CommentId: $comment_id}) "
+                "WHERE rel.uid = u.GithubId + '-' + $issue_owner + '-' + $issue_repo_name + '-' + toString($issue_number) + '-' + toString(c.CommentId) "
+                "DELETE rel "
+                "WITH c "
+                "MATCH (c)-[rel2:COMMENT_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
+                "WHERE rel2.uid = c.CommentId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) "
+                "DELETE rel2"
         )
         tx.run(
             query,
