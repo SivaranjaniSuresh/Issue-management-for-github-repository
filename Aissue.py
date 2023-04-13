@@ -10,7 +10,7 @@ github_token = os.getenv("GITHUB_API")
 
 st.set_page_config(page_title="GitHub Issue Viewer", page_icon=":octocat:")
 
-st.title("GitHub Issue Viewer :octocat:")
+st.title("GitHub Issue Viewer 🐙")
 st.markdown("Enter your GitHub ID and explore your repositories and their issues!")
 
 github_id = st.text_input("Enter your GitHub ID:")
