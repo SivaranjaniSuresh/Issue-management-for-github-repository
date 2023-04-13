@@ -529,7 +529,7 @@ class Neo4jGitHub:
             "MATCH (u2)-[rel2:ASSIGNED_TO]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
             "WHERE rel2.uid = u2.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) "
             "DELETE rel2"
-        ) 
+        )
         tx.run(
             query,
             assigner_github_id=assigner_github_id,
@@ -595,9 +595,9 @@ class Neo4jGitHub:
         tx, github_id, issue_owner, issue_repo_name, issue_number, milestone_type
     ):
         query = (
-                "MATCH (u:User {GithubId: $github_id})-[rel:ADDED_MILESTONE]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
-                "WHERE rel.MilestoneType = $milestone_type "
-                "DELETE rel"
+            "MATCH (u:User {GithubId: $github_id})-[rel:ADDED_MILESTONE]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
+            "WHERE rel.MilestoneType = $milestone_type "
+            "DELETE rel"
         )
         tx.run(
             query,
