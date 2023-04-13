@@ -1,8 +1,9 @@
-import streamlit as st
-import requests
 import os
-from dotenv import load_dotenv
 import re
+
+import requests
+import streamlit as st
+from dotenv import load_dotenv
 
 load_dotenv()
 
