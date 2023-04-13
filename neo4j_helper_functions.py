@@ -358,8 +358,10 @@ class Neo4jGitHub:
             "MATCH (u:User {GithubId: $github_id}), "
             "(c:Comment {CommentId: $comment_id}), "
             "(r:Reaction {ReactionName: $reaction_type}) "
-            "MERGE (u)-[rel:REACTED]->(r)-[:REACTION_ON]->(c) "
-            "ON CREATE SET rel.uid = u.GithubId + '-' + toString(c.CommentId) + '-' + r.ReactionName, rel.Timestamp = timestamp()"
+            "MERGE (u)-[rel:REACTED]->(r) "
+            "ON CREATE SET rel.uid = u.GithubId + '-' + toString(c.CommentId) + '-' + r.ReactionName, rel.Timestamp = timestamp() "
+            "MERGE (r)-[rel2:REACTION_ON]->(c) "
+            "ON CREATE SET rel2.uid = r.ReactionName + '-' + toString(c.CommentId), rel2.Timestamp = timestamp()"
         )
 
         tx.run(
@@ -672,13 +674,13 @@ class Neo4jGitHub:
         tx, github_id, issue_owner, issue_repo_name, issue_number, comment_id
     ):
         query = (
-                "MATCH (u:User {GithubId: $github_id})-[rel:COMMENTED]->(c:Comment {CommentId: $comment_id}) "
-                "WHERE rel.uid = u.GithubId + '-' + $issue_owner + '-' + $issue_repo_name + '-' + toString($issue_number) + '-' + toString(c.CommentId) "
-                "DELETE rel "
-                "WITH c "
-                "MATCH (c)-[rel2:COMMENT_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
-                "WHERE rel2.uid = c.CommentId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) "
-                "DELETE rel2"
+            "MATCH (u:User {GithubId: $github_id})-[rel:COMMENTED]->(c:Comment {CommentId: $comment_id}) "
+            "WHERE rel.uid = u.GithubId + '-' + $issue_owner + '-' + $issue_repo_name + '-' + toString($issue_number) + '-' + toString(c.CommentId) "
+            "DELETE rel "
+            "WITH c "
+            "MATCH (c)-[rel2:COMMENT_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
+            "WHERE rel2.uid = c.CommentId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) "
+            "DELETE rel2"
         )
         tx.run(
             query,
@@ -706,8 +708,13 @@ class Neo4jGitHub:
         tx, github_id, comment_id, reaction_type
     ):
         query = (
-            "MATCH (u:User {GithubId: $github_id})-[rel:REACTED]->(r:Reaction {ReactionName: $reaction_type})-[:REACTION_ON]->(c:Comment {CommentId: $comment_id}) "
-            "DELETE rel"
+            "MATCH (u:User {GithubId: $github_id})-[rel:REACTED]->(r:Reaction {ReactionName: $reaction_type}) "
+            "WHERE rel.uid = u.GithubId + '-' + toString($comment_id) + '-' + r.ReactionName "
+            "DELETE rel "
+            "WITH r "
+            "MATCH (r)-[rel2:REACTION_ON]->(c:Comment {CommentId: $comment_id}) "
+            "WHERE rel2.uid = r.ReactionName + '-' + toString(c.CommentId) "
+            "DELETE rel2"
         )
         tx.run(
             query,
