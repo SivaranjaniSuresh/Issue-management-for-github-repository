@@ -605,13 +605,13 @@ class Neo4jGitHub:
         tx, github_id, issue_owner, issue_repo_name, issue_number, milestone_type
     ):
         query = (
-                "MATCH (u:User {GithubId: $github_id})-[rel:ADDED_MILESTONE]->(m:Milestone {MilestoneType: $milestone_type}) "
-                "WHERE rel.uid = u.GithubId + '-' + $issue_owner + '-' + $issue_repo_name + '-' + toString($issue_number) + '-' + m.MilestoneType "
-                "DELETE rel "
-                "WITH m "
-                "MATCH (m)-[rel2:MILESTONE_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
-                "WHERE rel2.uid = m.MilestoneType + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) "
-                "DELETE rel2"
+            "MATCH (u:User {GithubId: $github_id})-[rel:ADDED_MILESTONE]->(m:Milestone {MilestoneType: $milestone_type}) "
+            "WHERE rel.uid = u.GithubId + '-' + $issue_owner + '-' + $issue_repo_name + '-' + toString($issue_number) + '-' + m.MilestoneType "
+            "DELETE rel "
+            "WITH m "
+            "MATCH (m)-[rel2:MILESTONE_ON]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
+            "WHERE rel2.uid = m.MilestoneType + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) "
+            "DELETE rel2"
         )
         tx.run(
             query,
