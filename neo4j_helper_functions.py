@@ -179,7 +179,7 @@ class Neo4jGitHub:
             "MATCH (u1:User {GithubId: $assigner_github_id}), "
             "(u2:User {GithubId: $assignee_github_id}), "
             "(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
-            "MERGE (u1)-[rel:ASSIGNED_ISSUE]->(u2) "
+            "MERGE (u1)<-[rel:ASSIGNED_ON_ISSUE_BY]-(u2) "
             "ON CREATE SET rel.uid = u1.GithubId + '-' + u2.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber), rel.Timestamp = timestamp() "
             "MERGE (u2)-[rel2:ASSIGNED_TO]->(i) "
             "ON CREATE SET rel2.uid = u2.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber), rel2.Timestamp = timestamp()"
@@ -529,14 +529,14 @@ class Neo4jGitHub:
         issue_number,
     ):
         query = (
-            "MATCH (u1:User {GithubId: $assigner_github_id})-[rel:ASSIGNED_ISSUE]->(u2:User {GithubId: $assignee_github_id}) "
+            "MATCH (u1:User {GithubId: $assigner_github_id})<-[rel:ASSIGNED_ON_ISSUE_BY]-(u2:User {GithubId: $assignee_github_id}) "
             "WHERE rel.uid = u1.GithubId + '-' + u2.GithubId + '-' + $issue_owner + '-' + $issue_repo_name + '-' + toString($issue_number) "
             "DELETE rel "
             "WITH u2 "
             "MATCH (u2)-[rel2:ASSIGNED_TO]->(i:Issue {Owner: $issue_owner, RepoName: $issue_repo_name, IssueNumber: $issue_number}) "
             "WHERE rel2.uid = u2.GithubId + '-' + i.Owner + '-' + i.RepoName + '-' + toString(i.IssueNumber) "
             "DELETE rel2"
-        )
+        ) 
         tx.run(
             query,
             assigner_github_id=assigner_github_id,
