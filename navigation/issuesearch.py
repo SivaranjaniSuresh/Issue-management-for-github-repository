@@ -76,13 +76,8 @@ def get_issue_url(issue_number, repo_owner, repo_name):
     session = SessionLocal()
     try:
         result = session.execute(
-            "SELECT ISSUE_URL FROM GITHUB_ISSUES.PUBLIC.ISSUES "
-            "WHERE ID = :issue_number AND REPO_OWNER = :repo_owner AND REPO_NAME = :repo_name",
-            {
-                "issue_number": issue_number,
-                "repo_owner": repo_owner,
-                "repo_name": repo_name,
-            },
+            f"""SELECT ISSUE_URL FROM GITHUB_ISSUES.PUBLIC.ISSUES 
+            WHERE ID = '{issue_number}' AND REPO_OWNER = '{repo_owner}' AND REPO_NAME = '{repo_name}' AND STATE = 'closed'"""
         )
         row = result.fetchone()
         return row[0] if row else None
@@ -116,7 +111,7 @@ def check_similarity(embedded_issue):
             similarity = ((max_dist - match.distance) / max_dist) * 100
             # Round the similarity score to 2 decimal places
             similarity = round(similarity, 2)
-            if similarity > 80:
+            if similarity > 90:
                 filtered_results.append({"id": match.id, "similarity": similarity})
 
     return filtered_results
@@ -188,9 +183,7 @@ def get_similar_issues(issue_text, selected_owner, selected_repo):
     with st.spinner("Checking Similarity..."):
         similar_issues = check_similarity(embedded_issue_text_dict)
         if similar_issues:
-            st.warning(
-                "Similar issues with more than 98% similarity and state='closed':"
-            )
+            st.warning("Similar closed issues with more than 90% similarity")
             for issue in similar_issues:
                 issue_url = get_issue_url(issue["id"], selected_owner, selected_repo)
                 if issue_url:
