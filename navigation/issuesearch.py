@@ -15,8 +15,11 @@ load_dotenv()
 
 GITHUB_ACCESS_TOKEN = os.environ.get("access_token")
 
-tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", max_length=1024)
-model = BertModel.from_pretrained("bert-base-uncased")
+tokenizer = BertTokenizer.from_pretrained(
+    "/app/bert-base-uncased-tokenizer", max_length=1024
+)
+model = BertModel.from_pretrained("/app/bert-base-uncased")
+
 model.eval()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
