@@ -9,18 +9,8 @@ import snowflake.connector
 import torch
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.http.operators.http import SimpleHttpOperator
-from dotenv import load_dotenv
-from pymilvus import (
-    Collection,
-    CollectionSchema,
-    DataType,
-    FieldSchema,
-    connections,
-    utility,
-)
-from transformers import BertModel, BertTokenizer
+import re
 
-from airflow import DAG
 
 load_dotenv()
 
@@ -45,16 +35,25 @@ conn = snowflake.connector.connect(
     table=SNOWFLAKE_TABLE,
 )
 
-tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", max_length=1024)
-model = BertModel.from_pretrained("bert-base-uncased")
-model.eval()
+default_args = {
+    "owner": "airflow",
+    "start_date": datetime.datetime(2023, 4, 17),
+    "retries": 2,
+    "retry_delay": datetime.timedelta(minutes=2),
+}
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+dag = DAG(
+    'embedding',
+    default_args=default_args,
+    description='A pipeline to fetch GitHub issue data, store it in Snowflake, and compute embeddings',
+    schedule_interval=datetime.timedelta(days=1),
+    catchup=False,
+)
 
 
 def get_all_issues(owner, repo, access_token):
     cursor = conn.cursor()
-    result = cursor.execute("SELECT MAX(UPDATED_AT) FROM GITHUB_ISSUES.PUBLIC.ISSUES")
+    result = cursor.execute(f"SELECT MAX(UPDATED_AT) FROM GITHUB_ISSUES.PUBLIC.ISSUES WHERE REPO_OWNER='{owner}' AND REPO_NAME='{repo}'")
     last_updated_at = result.fetchone()[0]
     # Increment last_updated_at by 1 second
     if last_updated_at is not None:
@@ -143,6 +142,34 @@ def store_issues_in_snowflake(issues, owner, repo):
         labels = ", ".join([label["name"] for label in issue["labels"]])
         milestone = issue["milestone"]["title"] if issue["milestone"] else "None"
 
+        # Define an empty list to store the rows
+        rows = []
+
+         # Create a dictionary representing the current row
+        row = {
+            "id": issue["id"],
+            "issue_url": issue["html_url"],
+            "repo_owner": owner,
+            "repo_name": repo,
+            "issue_number": issue["number"],
+            "created_by": issue["user"]["login"],
+            "title": issue["title"],
+            "body": issue["body"],
+            "comments": comments_dict,
+            "reactions": reactions_dict,
+            "assignees": assignees,
+            "labels": labels,
+            "milestone": milestone,
+            "state": issue["state"],
+            "updated_at": issue["updated_at"],
+        }
+
+        # Append the row to the list
+        rows.append(row)
+
+        # Create the DataFrame
+        df = pd.DataFrame(rows)
+
         query = """
             MERGE INTO GITHUB_ISSUES.PUBLIC.ISSUES USING (
                 SELECT %(id)s AS id, %(issue_url)s AS issue_url, %(repo_owner)s AS repo_owner, %(repo_name)s AS repo_name,
@@ -184,6 +211,16 @@ def store_issues_in_snowflake(issues, owner, repo):
 
     cursor.close()
 
+import numpy as np
+import pandas as pd
+from transformers import BertTokenizer, BertModel
+import torch
+
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', max_length=1024)
+model = BertModel.from_pretrained('bert-base-uncased')
+model.eval()
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def preprocess_text(text):
     # Remove URLs
@@ -273,10 +310,18 @@ def get_issue_embeddings(tokenized_issue_data, max_chunk_size=512):
     print(issue_embeddings)
     return issue_embeddings
 
+from pymilvus import (
+    connections,
+    utility,
+    FieldSchema,
+    CollectionSchema,
+    DataType,
+    Collection,
+)
+
 
 def store_embeddings_in_milvus(issue_embeddings):
     data_dict = issue_embeddings
-
     primary_keys = [key for key in data_dict.keys()]
     vectors = list(data_dict.values())
     dim = len(vectors[0])  # Set the dimension based on the length of the first vector
@@ -284,98 +329,113 @@ def store_embeddings_in_milvus(issue_embeddings):
     # Connect to Milvus
     connections.connect("default", host="34.138.127.169", port="19530")
 
-    utility.drop_collection("my_collection")
+    # Check if collection exists
+    if not utility.has_collection("my_collection"):
+        # Create collection
+        fields = [
+            FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=False),
+            FieldSchema(name="embeddings", dtype=DataType.FLOAT_VECTOR, dim=dim)
+        ]
 
-    # Create collection
-    fields = [
-        FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=False),
-        FieldSchema(name="embeddings", dtype=DataType.FLOAT_VECTOR, dim=dim),
-    ]
+        schema = CollectionSchema(fields, "My collection with primary keys and vector embeddings")
+        my_collection = Collection("my_collection", schema, consistency_level="Strong")
 
-    schema = CollectionSchema(
-        fields, "My collection with primary keys and vector embeddings"
-    )
-    my_collection = Collection("my_collection", schema, consistency_level="Strong")
+        # Create index
+        index = {
+            "index_type": "IVF_FLAT",
+            "metric_type": "L2",
+            "params": {"nlist": 128},
+        }
+        my_collection.create_index("embeddings", index)
+    else:
+        my_collection = Collection("my_collection")
 
-    # Insert data
-    entities = [primary_keys, vectors]
+    # Load data into memory
+    my_collection.load()
 
-    insert_result = my_collection.insert(entities)
-    my_collection.flush()
+    # Fetch all records from the collection using primary key values
+    existing_records = my_collection.query(f"pk in {primary_keys}", output_fields=["pk", "embeddings"])
 
-    # Create index
-    index = {
-        "index_type": "IVF_FLAT",
-        "metric_type": "L2",
-        "params": {"nlist": 128},
-    }
-    my_collection.create_index("embeddings", index)
+    # Create a dictionary to store existing records
+    existing_dict = {int(record['pk']): record['embeddings'] for record in existing_records}
+
+    # Iterate over new embeddings and update or insert as necessary
+    for pk, embedding in issue_embeddings.items():
+        if pk in existing_dict:
+            # Delete the old record
+            my_collection.delete(f"pk in [{pk}]")
+            my_collection.flush()
+
+            # Insert the updated record
+            entities = [
+                [pk],
+                [embedding]
+            ]
+            insert_result = my_collection.insert(entities)
+            my_collection.flush()
+        else:
+            # Insert the new embedding
+            entities = [
+                [pk],
+                [embedding]
+            ]
+            insert_result = my_collection.insert(entities)
+            my_collection.flush()
 
     # Load data into memory
     my_collection.load()
 
     print("Done")
-    # Perform other operations like search, query, etc., as needed
-    # Fetch all records from the collection using primary key values
-    all_records = my_collection.query(
-        f"pk in {primary_keys}", output_fields=["pk", "embeddings"]
-    )
 
-    results_dict = {}
-    # Populate the dictionary with fetched records
-    for record in all_records:
-        results_dict[int(record["pk"])] = record["embeddings"]
+owner_repo_pairs = [
+    ("openai", "openai-python"),
+    ("twitter", "the-algorithm"),
+    ("facebook", "Rapid"),
+]
 
-    print(results_dict)
+def fetch_and_store_github_issues(owner_repo_pairs, **kwargs):
+    fetched_issues = []
 
+    for owner, repo in owner_repo_pairs:
+        issues = get_all_issues(owner, repo, access_token)
+        store_issues_in_snowflake(issues, owner, repo)
+        fetched_issues.extend(issues)
 
-default_args = {
-    "owner": "airflow",
-    "start_date": datetime.datetime(2023, 4, 17),
-    "retries": 2,
-    "retry_delay": datetime.timedelta(minutes=5),
-}
-
-dag = DAG(
-    "github_issue_data_pipeline",
-    default_args=default_args,
-    description="A pipeline to fetch GitHub issue data, store it in Snowflake, and compute embeddings",
-    schedule_interval=datetime.timedelta(days=1),
-    catchup=False,
-)
+    print(fetched_issues)
+    return fetched_issues
 
 
-def fetch_and_store_github_issues(**kwargs):
-    owner = "openai"
-    repo = "openai-python"
-    issues = get_all_issues(owner, repo, access_token)
-    store_issues_in_snowflake(issues, owner, repo)
-
-
-def compute_embeddings(**kwargs):
-    preprocessed_issue_data = preprocess_closed_issue_data()
-    issue_embeddings = get_issue_embeddings(preprocessed_issue_data)
+def compute_embeddings(fetched_issues, **kwargs):
     issue_ids = []
-    for issue_id, embedding in issue_embeddings.items():
-        issue_ids.append(issue_id)
-        kwargs["ti"].xcom_push(key=str(issue_id), value=embedding)
-    kwargs["ti"].xcom_push(key="issue_ids", value=issue_ids)
+    issue_embeddings = {}
 
+    for issue in fetched_issues:
+        issue_number = issue["id"]
+        body_text = issue["body"]
+        preprocessed_text = preprocess_text(body_text)
+        tokenized_text = ' '.join([str(token_id) for token_id in preprocessed_text])
+        
+        embedding = get_issue_embeddings({issue_number: tokenized_text})
+        issue_embeddings[int(issue_number)] = embedding[issue_number]
+
+        issue_ids.append(issue_number)
+        kwargs["ti"].xcom_push(key=str(issue_number), value=embedding[issue_number])
+
+    kwargs["ti"].xcom_push(key="issue_ids", value=issue_ids)
 
 def store_embeddings_in_milvus_task(**kwargs):
     issue_ids = kwargs["ti"].xcom_pull(key="issue_ids")
     issue_embeddings = {}
     for issue_id in issue_ids:
         embedding = kwargs["ti"].xcom_pull(key=str(issue_id))
-        issue_embeddings[
-            int(issue_id)
-        ] = embedding  # Convert the issue ID to an integer
+        issue_embeddings[int(issue_id)] = embedding  # Convert the issue to an integer
     store_embeddings_in_milvus(issue_embeddings)
 
 
 fetch_and_store_github_issues_task = PythonOperator(
     task_id="fetch_and_store_github_issues",
     python_callable=fetch_and_store_github_issues,
+    op_args=[owner_repo_pairs],
     provide_context=True,
     dag=dag,
 )
@@ -383,6 +443,8 @@ fetch_and_store_github_issues_task = PythonOperator(
 compute_embeddings_task = PythonOperator(
     task_id="compute_embeddings",
     python_callable=compute_embeddings,
+    provide_context=True,
+    op_args=[fetch_and_store_github_issues_task.output],
     dag=dag,
 )
 
@@ -393,8 +455,4 @@ store_embeddings_in_milvus_task = PythonOperator(
     dag=dag,
 )
 
-(
-    fetch_and_store_github_issues_task
-    >> compute_embeddings_task
-    >> store_embeddings_in_milvus_task
-)
+fetch_and_store_github_issues_task >> compute_embeddings_task >> store_embeddings_in_milvus_task
