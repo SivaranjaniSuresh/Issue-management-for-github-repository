@@ -1,24 +1,26 @@
-import os
 import datetime
 import json
+import os
+import re
+
+import numpy as np
 import requests
-from dotenv import load_dotenv
 import snowflake.connector
-from airflow import DAG
+import torch
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.http.operators.http import SimpleHttpOperator
-import re
-import numpy as np
-from transformers import BertTokenizer, BertModel
-import torch
+from dotenv import load_dotenv
 from pymilvus import (
-    connections,
-    utility,
-    FieldSchema,
+    Collection,
     CollectionSchema,
     DataType,
-    Collection,
+    FieldSchema,
+    connections,
+    utility,
 )
+from transformers import BertModel, BertTokenizer
+
+from airflow import DAG
 
 load_dotenv()
 
@@ -43,11 +45,12 @@ conn = snowflake.connector.connect(
     table=SNOWFLAKE_TABLE,
 )
 
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', max_length=1024)
-model = BertModel.from_pretrained('bert-base-uncased')
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", max_length=1024)
+model = BertModel.from_pretrained("bert-base-uncased")
 model.eval()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def get_all_issues(owner, repo, access_token):
     cursor = conn.cursor()
@@ -181,16 +184,22 @@ def store_issues_in_snowflake(issues, owner, repo):
 
     cursor.close()
 
+
 def preprocess_text(text):
     # Remove URLs
-    text = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', text)
+    text = re.sub(
+        r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+        "",
+        text,
+    )
     # Tokenize the text using the BERT tokenizer
     tokens = tokenizer.tokenize(text)
 
     # Convert tokens to IDs
     token_ids = tokenizer.convert_tokens_to_ids(tokens)
-    
+
     return token_ids
+
 
 def preprocess_closed_issue_data():
     cursor = conn.cursor()
@@ -202,22 +211,23 @@ def preprocess_closed_issue_data():
     rows = cursor.fetchall()
 
     preprocessed_texts = {}
-    
+
     # Iterate over rows and preprocess the BODY column
     for row in rows:
         issue_number = row[0]  # Assuming ISSUE_NUMBER column is at index 0
         body_text = row[7]  # Assuming BODY column is at index 6
         preprocessed_text = preprocess_text(body_text)
         # Convert token IDs to strings and join them
-        tokenized_text = ' '.join([str(token_id) for token_id in preprocessed_text])
-        
+        tokenized_text = " ".join([str(token_id) for token_id in preprocessed_text])
+
         preprocessed_texts[issue_number] = tokenized_text
-        
+
     # Close cursor and connection
     cursor.close()
     conn.close()
 
     return preprocessed_texts
+
 
 def get_issue_embeddings(tokenized_issue_data, max_chunk_size=512):
     tokenized_texts = list(tokenized_issue_data.values())
@@ -231,25 +241,38 @@ def get_issue_embeddings(tokenized_issue_data, max_chunk_size=512):
         if len(token_ids) < max_chunk_size:
             token_id_chunks = [token_ids]
         else:
-            token_id_chunks = [token_ids[i:i + max_chunk_size] for i in range(0, len(token_ids), max_chunk_size)]
+            token_id_chunks = [
+                token_ids[i : i + max_chunk_size]
+                for i in range(0, len(token_ids), max_chunk_size)
+            ]
 
         chunk_embeddings = []
         with torch.no_grad():
             for chunk in token_id_chunks:
                 if not chunk:
                     continue
-                embedding = model(torch.tensor(chunk).unsqueeze(0).to(device))[1].squeeze().cpu().numpy()
+                embedding = (
+                    model(torch.tensor(chunk).unsqueeze(0).to(device))[1]
+                    .squeeze()
+                    .cpu()
+                    .numpy()
+                )
                 chunk_embeddings.append(embedding)
-        avg_embedding = np.zeros(768) if not chunk_embeddings else np.mean(chunk_embeddings, axis=0)
+        avg_embedding = (
+            np.zeros(768) if not chunk_embeddings else np.mean(chunk_embeddings, axis=0)
+        )
         return avg_embedding
 
     issue_embeddings = {}
     for issue_number, text in zip(issue_numbers, tokenized_texts):
         embedding = bert_embedding(text)
-        issue_embeddings[issue_number] = embedding.tolist()  # Convert numpy array to list
+        issue_embeddings[
+            issue_number
+        ] = embedding.tolist()  # Convert numpy array to list
 
     print(issue_embeddings)
     return issue_embeddings
+
 
 def store_embeddings_in_milvus(issue_embeddings):
     data_dict = issue_embeddings
@@ -266,17 +289,16 @@ def store_embeddings_in_milvus(issue_embeddings):
     # Create collection
     fields = [
         FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=False),
-        FieldSchema(name="embeddings", dtype=DataType.FLOAT_VECTOR, dim=dim)
+        FieldSchema(name="embeddings", dtype=DataType.FLOAT_VECTOR, dim=dim),
     ]
 
-    schema = CollectionSchema(fields, "My collection with primary keys and vector embeddings")
+    schema = CollectionSchema(
+        fields, "My collection with primary keys and vector embeddings"
+    )
     my_collection = Collection("my_collection", schema, consistency_level="Strong")
 
     # Insert data
-    entities = [
-        primary_keys,
-        vectors
-    ]
+    entities = [primary_keys, vectors]
 
     insert_result = my_collection.insert(entities)
     my_collection.flush()
@@ -295,15 +317,16 @@ def store_embeddings_in_milvus(issue_embeddings):
     print("Done")
     # Perform other operations like search, query, etc., as needed
     # Fetch all records from the collection using primary key values
-    all_records = my_collection.query(f"pk in {primary_keys}", output_fields=["pk", "embeddings"])
+    all_records = my_collection.query(
+        f"pk in {primary_keys}", output_fields=["pk", "embeddings"]
+    )
 
     results_dict = {}
     # Populate the dictionary with fetched records
     for record in all_records:
-        results_dict[int(record['pk'])] = record['embeddings']
+        results_dict[int(record["pk"])] = record["embeddings"]
 
     print(results_dict)
-
 
 
 default_args = {
@@ -314,18 +337,20 @@ default_args = {
 }
 
 dag = DAG(
-    'github_issue_data_pipeline',
+    "github_issue_data_pipeline",
     default_args=default_args,
-    description='A pipeline to fetch GitHub issue data, store it in Snowflake, and compute embeddings',
+    description="A pipeline to fetch GitHub issue data, store it in Snowflake, and compute embeddings",
     schedule_interval=datetime.timedelta(days=1),
     catchup=False,
 )
+
 
 def fetch_and_store_github_issues(**kwargs):
     owner = "openai"
     repo = "openai-python"
     issues = get_all_issues(owner, repo, access_token)
     store_issues_in_snowflake(issues, owner, repo)
+
 
 def compute_embeddings(**kwargs):
     preprocessed_issue_data = preprocess_closed_issue_data()
@@ -342,8 +367,11 @@ def store_embeddings_in_milvus_task(**kwargs):
     issue_embeddings = {}
     for issue_id in issue_ids:
         embedding = kwargs["ti"].xcom_pull(key=str(issue_id))
-        issue_embeddings[int(issue_id)] = embedding  # Convert the issue ID to an integer
+        issue_embeddings[
+            int(issue_id)
+        ] = embedding  # Convert the issue ID to an integer
     store_embeddings_in_milvus(issue_embeddings)
+
 
 fetch_and_store_github_issues_task = PythonOperator(
     task_id="fetch_and_store_github_issues",
@@ -353,7 +381,7 @@ fetch_and_store_github_issues_task = PythonOperator(
 )
 
 compute_embeddings_task = PythonOperator(
-    task_id='compute_embeddings',
+    task_id="compute_embeddings",
     python_callable=compute_embeddings,
     dag=dag,
 )
@@ -365,4 +393,8 @@ store_embeddings_in_milvus_task = PythonOperator(
     dag=dag,
 )
 
-fetch_and_store_github_issues_task >> compute_embeddings_task >> store_embeddings_in_milvus_task
+(
+    fetch_and_store_github_issues_task
+    >> compute_embeddings_task
+    >> store_embeddings_in_milvus_task
+)
