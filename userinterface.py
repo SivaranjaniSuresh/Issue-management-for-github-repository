@@ -1,35 +1,28 @@
-import json
 import os
 import re
 
 import requests
 import streamlit as st
-from core_helpers import decode_token
-from jose import JWTError, jwt
+from dotenv import load_dotenv
 
-from utils.database_helpers import DBUtil
+from utils.core_helpers import decode_token
 
-SECRET_KEY = "KEY"
-ALGORITHM = "ALGORITHM"
+load_dotenv()
 
-SNOWFLAKE_USER = (os.environ.get("SNOWFLAKE_USER"),)
-SNOWFLAKE_PASSWORD = (os.environ.get("SNOWFLAKE_PASSWORD"),)
-SNOWFLAKE_ACCOUNT = (os.environ.get("SNOWFLAKE_ACCOUNT"),)
-SNOWFLAKE_WAREHOUSE = (os.environ.get("SNOWFLAKE_WAREHOUSE"),)
-SNOWFLAKE_DATABASE = (os.environ.get("SNOWFLAKE_DATABASE"),)
+SECRET_KEY = os.environ.get("SECRET_KEY")
+ALGORITHM = os.environ.get("ALGORITHM")
+
+SNOWFLAKE_USER = os.environ.get("SNOWFLAKE_USER")
+SNOWFLAKE_PASSWORD = os.environ.get("SNOWFLAKE_PASSWORD")
+SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT")
+SNOWFLAKE_WAREHOUSE = os.environ.get("SNOWFLAKE_WAREHOUSE")
+SNOWFLAKE_DATABASE = os.environ.get("SNOWFLAKE_DATABASE")
 SNOWFLAKE_SCHEMA = os.environ.get("SNOWFLAKE_SCHEMA")
 
-db = DBUtil(
-    user=SNOWFLAKE_USER,
-    password=SNOWFLAKE_PASSWORD,
-    account=SNOWFLAKE_ACCOUNT,
-    warehouse=SNOWFLAKE_WAREHOUSE,
-    database=SNOWFLAKE_DATABASE,
-    schema=SNOWFLAKE_SCHEMA,
-)
+PREFIX = os.environ.get("PREFIX")
 
 
-def signup(db, database, schema):
+def signup():
     st.title("Sign Up")
     col1, col2 = st.columns(2)
     # Define regular expressions
@@ -39,7 +32,6 @@ def signup(db, database, schema):
     # Define input fields
     username = col1.text_input("Enter username")
     password = col1.text_input("Enter password", type="password")
-    github_repo = col1.text_input("Enter Github Repository")
     service = col2.selectbox(
         "Select a service",
         ["Platinum - (100$)", "Gold - (50$)", "Free - (0$)"],
@@ -61,11 +53,6 @@ def signup(db, database, schema):
         )
         has_error = True
 
-    # Validate Github Repo
-    if not github_repo:
-        st.error("Username is required.")
-        has_error = True
-
     # Validate credit card
     if not re.match(credit_card_regex, credit_card):
         st.error(
@@ -84,24 +71,46 @@ def signup(db, database, schema):
         user = {
             "username": username,
             "password": password,
-            "github_repo": github_repo,
             "credit_card": credit_card,
             "service": service,
             "calls_remaining": calls_remaining,
         }
+        response = requests.post(f"{PREFIX}/signup", json=user)
 
-        # Check if the entered username is unique
-        cursor = db.conn.cursor()
-        query = f"SELECT COUNT(*) FROM users WHERE username = '{username}'"
-        cursor.execute(query)
-        count = cursor.fetchone()[0]
-        cursor.close()
-
-        if count > 0:
-            st.error("Username already exists. Please choose a different username.")
+        if response.status_code == 200:
+            user = response.json()
+            st.success("You have successfully signed up!")
+        elif response.status_code == 400:
+            st.error(response.json()["detail"])
         else:
-            db.add_record(database, schema, "APP_USERS", user)
-            st.success("Successfully signed up!")
+            st.error("Something went wrong")
+
+
+def signin():
+    st.title("Sign In")
+    username = st.text_input("Enter username")
+    password = st.text_input("Enter password", type="password")
+
+    if st.button("Sign in"):
+        data = {
+            "grant_type": "password",
+            "username": username,
+            "password": password,
+            "scope": "openid profile email",
+        }
+        response = requests.post(
+            f"{PREFIX}/signin",
+            data=data,
+            auth=("client_id", "client_secret"),
+        )
+        if response.status_code == 200:
+            access_token = response.json()["access_token"]
+            st.success("You have successfully signed in!")
+            return access_token
+        elif response.status_code == 400:
+            st.error(response.json()["detail"])
+        else:
+            st.error("Something went wrong")
 
 
 # Define the Streamlit app
@@ -111,13 +120,13 @@ def main():
 
     # Check if user is signed in
     token = st.session_state.get("token", None)
-    user_id = decode_token(token)
+    user_id = decode_token(token, SECRET_KEY, ALGORITHM)
 
     # Render the navigation sidebar
     if user_id is not None:
         selection = st.sidebar.radio(["Log Out"])
     else:
-        selection = st.sidebar.radio("Go to", ["Sign In", "Sign Up", "Forget Password"])
+        selection = st.sidebar.radio("Go to", ["Sign In", "Sign Up"])
 
     # Render the selected page or perform logout
     if selection == "Log Out":
@@ -125,7 +134,12 @@ def main():
         st.sidebar.success("You have successfully logged out!")
         st.experimental_rerun()
     elif selection == "Sign Up":
-        signup(db, SNOWFLAKE_DATABASE, SNOWFLAKE_SCHEMA)
+        signup()
+    elif selection == "Sign In":
+        token = signin()
+        if token is not None:
+            st.session_state.token = token
+            st.experimental_rerun()
 
 
 if __name__ == "__main__":
