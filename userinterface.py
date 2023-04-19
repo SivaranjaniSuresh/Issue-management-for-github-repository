@@ -5,6 +5,7 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 
+from navigation.issuesearch import issuesearch
 from utils.core_helpers import decode_token
 
 load_dotenv()
@@ -113,6 +114,12 @@ def signin():
             st.error("Something went wrong")
 
 
+# Define the Streamlit pages
+pages = {
+    "Issue Search": issuesearch,
+}
+
+
 # Define the Streamlit app
 def main():
     st.set_page_config(page_title="AIssueFlow", page_icon=":satellite:", layout="wide")
@@ -124,7 +131,7 @@ def main():
 
     # Render the navigation sidebar
     if user_id is not None:
-        selection = st.sidebar.radio(["Log Out"])
+        selection = st.sidebar.radio("Go to", list(pages.keys()) + ["Log Out"])
     else:
         selection = st.sidebar.radio("Go to", ["Sign In", "Sign Up"])
 
@@ -140,6 +147,9 @@ def main():
         if token is not None:
             st.session_state.token = token
             st.experimental_rerun()
+    else:
+        page = pages[selection]
+        page(token, user_id)
 
 
 if __name__ == "__main__":
