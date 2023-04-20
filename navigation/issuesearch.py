@@ -11,14 +11,17 @@ from transformers import BertModel, BertTokenizer
 
 from backend.database import SessionLocal
 
+import openai
+
 load_dotenv()
 
 GITHUB_ACCESS_TOKEN = os.environ.get("access_token")
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 tokenizer = BertTokenizer.from_pretrained(
-    "/app/bert-base-uncased-tokenizer", max_length=1024
+    "./bert-base-uncased-tokenizer", max_length=1024
 )
-model = BertModel.from_pretrained("/app/bert-base-uncased")
+model = BertModel.from_pretrained("./bert-base-uncased")
 
 model.eval()
 
@@ -79,11 +82,11 @@ def get_issue_url(issue_number, repo_owner, repo_name):
     session = SessionLocal()
     try:
         result = session.execute(
-            f"""SELECT ISSUE_URL FROM GITHUB_ISSUES.PUBLIC.ISSUES 
+            f"""SELECT ISSUE_URL, TITLE FROM GITHUB_ISSUES.PUBLIC.ISSUES 
             WHERE ID = '{issue_number}' AND REPO_OWNER = '{repo_owner}' AND REPO_NAME = '{repo_name}' AND STATE = 'closed'"""
         )
         row = result.fetchone()
-        return row[0] if row else None
+        return (row[0], row[1]) if row else (None, None)
     finally:
         session.close()
 
@@ -171,7 +174,6 @@ def get_similar_issues(issue_text, selected_owner, selected_repo):
     tokenized_issue_text = []
     with st.spinner("Pre-processing Issue Text..."):
         preprocessed_issue_text = preprocess_text(issue_text)
-        # Convert token IDs to strings and join them
         tokenized_text = " ".join(
             [str(token_id) for token_id in preprocessed_issue_text]
         )
@@ -185,43 +187,71 @@ def get_similar_issues(issue_text, selected_owner, selected_repo):
 
     with st.spinner("Checking Similarity..."):
         similar_issues = check_similarity(embedded_issue_text_dict)
+        similar_issues_output = []
         if similar_issues:
-            st.warning("Similar closed issues with more than 90% similarity")
             for issue in similar_issues:
-                issue_url = get_issue_url(issue["id"], selected_owner, selected_repo)
+                issue_url, title = get_issue_url(issue["id"], selected_owner, selected_repo)
                 if issue_url:
-                    st.success(
-                        f"Issue ID: {issue['id']}: {issue['similarity']}% - {issue_url}"
-                    )
+                    similar_issues_output.append({
+                        "title": title,
+                        "id": issue["id"],
+                        "similarity": issue["similarity"],
+                        "url": issue_url
+                    })
+        if len(similar_issues_output) > 0:
+            return similar_issues_output
         else:
-            st.error(f"No similar issue found")
+            return "None LOL"
 
+def get_summary(text):
+    prompt = f"Please analyze the following GitHub issue body and provide a brief and concise summary of the problem. Please note that we are only looking for a summary and not a solution or any additional information. Thank you. ONLY SUMMARY.\n\nIssue Body: {text}\n\n"
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=512,
+        n=1,
+        stop=None,
+        temperature=0.6,
+    )
+    return response.choices[0].message["content"].strip()
+
+def get_possible_solution(text):
+    prompt = f"What is a possible solution to the following GitHub issue? Please provide a detailed solution, or if there are no questions to answer in the issue, suggest some potential solutions or explain why a solution may not be feasible. If you are unsure, please provide any insights or suggestions that may be helpful in resolving the issue. Thank you for your contribution!.\n\n Github Issue:{text}\n\n"
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=512,
+        n=1,
+        stop=None,
+        temperature=0.6,
+    )
+    return response.choices[0].message["content"].strip()
 
 def issuesearch(token, user_id):
     st.title("GitHub Issues Similarity Check")
     col1, col2 = st.columns(2)
-    ## Get All Repo Owner
     unique_pairs = get_unique_owner_repo_pairs()
-    ## Create a dictionary with owner names as keys and lists of repos as values
     owner_repo_dict = {}
     for owner, repo in unique_pairs:
         if owner not in owner_repo_dict:
             owner_repo_dict[owner] = []
         owner_repo_dict[owner].append(repo)
 
-    # Dropdown for selecting an owner
     selected_owner = col1.selectbox("Select an owner", list(owner_repo_dict.keys()))
 
-    # Dropdown for selecting a repository
     if selected_owner:
         selected_repo = col2.selectbox(
             "Select a repository", owner_repo_dict[selected_owner]
         )
 
-    # Pagination
     page = st.number_input("Page", min_value=1, value=1, step=1)
 
-    # Fetch and display open issues
     issues = get_open_issues(selected_owner, selected_repo, GITHUB_ACCESS_TOKEN, page)
     if issues:
         st.write(f"**Open Issues for {selected_owner}/{selected_repo} (Page {page}):**")
@@ -240,20 +270,43 @@ def issuesearch(token, user_id):
                 else:
                     st.write("No comments.")
 
-                # Button to check for similar issues
-                if st.button(f"Find similar issues for {issue_title}"):
-                    similar_issues = get_similar_issues(
-                        issue_body, selected_owner, selected_repo
-                    )
-                    if similar_issues:
-                        st.write("Similar issues:")
-                        for sim_issue in similar_issues:
-                            st.write(f"{sim_issue['title']} - {sim_issue['html_url']}")
-                    else:
-                        st.write("No similar issues found.")
-    else:
-        st.write("No open issues found.")
+                summary_key = f"summary_{issue['number']}"
+                if st.session_state.get(summary_key):
+                    st.markdown(f"<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{st.session_state[summary_key]}</div>", unsafe_allow_html=True)
+                else:
+                    if st.button("Reveal the Essence.", key=f"summary_button_{issue['number']}"):
+                        with st.spinner("Generating summary..."):
+                            summary = get_summary(issue_body)
+                            st.session_state[summary_key] = summary
+                            st.markdown(f"<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{summary}</div>", unsafe_allow_html=True)
+                            st.experimental_rerun()
 
+                if st.button(f"Find similar issues for {issue_title}"):
+                    similar_issues = get_similar_issues(issue_body, selected_owner, selected_repo)
+                    if similar_issues != 'None LOL' and similar_issues != []:
+                        similar_issues_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Similar Issues</h4>"
+                        for similar_issue in similar_issues:
+                            title = similar_issue['title']
+                            issue_id = similar_issue['id']
+                            similarity = similar_issue['similarity']
+                            similarity_html = f"<span style='color: #39FF14;'>{similarity:.2f}%</span>"
+                            url = similar_issue['url']
+                            link_text = f"({url})"
+                            link_html = f"<a href='{url}'>{link_text}</a>"
+                            issue_html = f"<p>- {title} (#{issue_id}) - {similarity_html} - {link_html}</p>"
+                            similar_issues_html += issue_html
+                        similar_issues_html += "</div>"
+                        st.markdown(similar_issues_html, unsafe_allow_html=True)
+                    else:
+                        st.error("No similar closed issue found.")
+                        possible_solution = get_possible_solution(issue_body)
+                        if possible_solution:
+                            possible_solution_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"
+                            possible_solution_html += f"<p>{possible_solution}</p>"
+                            possible_solution_html += "</div>"
+                            st.markdown(possible_solution_html, unsafe_allow_html=True)
+    else:
+        st.write("No issues found.")
 
 if __name__ == "__main__":
     issuesearch()
