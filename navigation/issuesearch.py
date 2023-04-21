@@ -51,8 +51,8 @@ def issuesearch(access_token, user_id):
                         st.write(comment["user"]["login"] + ":")
                         st.write(comment["body"])
                 else:
-                    st.write("No comments.")
-
+                    st.write("No Comments.")
+                    
                 summary_key = f"summary_{issue['number']}"
                 if st.session_state.get(summary_key):
                     st.markdown(
