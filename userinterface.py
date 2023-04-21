@@ -117,8 +117,8 @@ def signin():
 
 # Define the Streamlit pages
 pages = {
-    "Issue Search": issuesearch,
-    "Ask Github": errorsearch
+    "Git-Issue-Wizard": issuesearch,
+    "Git-Cognizant": errorsearch
 }
 
 
