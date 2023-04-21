@@ -1,7 +1,9 @@
+import json
 import os
 import re
 
 import numpy as np
+import openai
 import requests
 import streamlit as st
 import torch
@@ -11,12 +13,11 @@ from transformers import BertModel, BertTokenizer
 
 from backend.database import SessionLocal
 
-import openai
-
 load_dotenv()
 
 GITHUB_ACCESS_TOKEN = os.environ.get("access_token")
 openai.api_key = os.environ.get("OPENAI_API_KEY")
+PREFIX = os.environ.get("PREFIX")
 
 tokenizer = BertTokenizer.from_pretrained(
     "./bert-base-uncased-tokenizer", max_length=1024
@@ -76,19 +77,6 @@ def bert_embedding(text):
     )
     embedded_text.append(avg_embedding)
     return embedded_text
-
-
-def get_issue_url(issue_number, repo_owner, repo_name):
-    session = SessionLocal()
-    try:
-        result = session.execute(
-            f"""SELECT ISSUE_URL, TITLE FROM GITHUB_ISSUES.PUBLIC.ISSUES 
-            WHERE ID = '{issue_number}' AND REPO_OWNER = '{repo_owner}' AND REPO_NAME = '{repo_name}' AND STATE = 'closed'"""
-        )
-        row = result.fetchone()
-        return (row[0], row[1]) if row else (None, None)
-    finally:
-        session.close()
 
 
 def check_similarity(embedded_issue):
@@ -170,7 +158,7 @@ def get_open_issues(owner, repo, access_token, page, per_page=10):
         return []
 
 
-def get_similar_issues(issue_text, selected_owner, selected_repo):
+def get_embeddings(issue_text):
     tokenized_issue_text = []
     with st.spinner("Pre-processing Issue Text..."):
         preprocessed_issue_text = preprocess_text(issue_text)
@@ -184,24 +172,8 @@ def get_similar_issues(issue_text, selected_owner, selected_repo):
         embedded_issue_text_dict = {
             i: list(embedding) for i, embedding in enumerate(embedded_issue_text)
         }
+    return embedded_issue_text_dict
 
-    with st.spinner("Checking Similarity..."):
-        similar_issues = check_similarity(embedded_issue_text_dict)
-        similar_issues_output = []
-        if similar_issues:
-            for issue in similar_issues:
-                issue_url, title = get_issue_url(issue["id"], selected_owner, selected_repo)
-                if issue_url:
-                    similar_issues_output.append({
-                        "title": title,
-                        "id": issue["id"],
-                        "similarity": issue["similarity"],
-                        "url": issue_url
-                    })
-        if len(similar_issues_output) > 0:
-            return similar_issues_output
-        else:
-            return "None LOL"
 
 def get_summary(text):
     prompt = f"Please analyze the following GitHub issue body and provide a brief and concise summary of the problem. Please note that we are only looking for a summary and not a solution or any additional information. Thank you. ONLY SUMMARY.\n\nIssue Body: {text}\n\n"
@@ -218,6 +190,7 @@ def get_summary(text):
     )
     return response.choices[0].message["content"].strip()
 
+
 def get_possible_solution(text):
     prompt = f"What is a possible solution to the following GitHub issue? Please provide a detailed solution, or if there are no questions to answer in the issue, suggest some potential solutions or explain why a solution may not be feasible. If you are unsure, please provide any insights or suggestions that may be helpful in resolving the issue. Thank you for your contribution!.\n\n Github Issue:{text}\n\n"
     response = openai.ChatCompletion.create(
@@ -233,7 +206,10 @@ def get_possible_solution(text):
     )
     return response.choices[0].message["content"].strip()
 
-def issuesearch(token, user_id):
+
+def issuesearch(access_token, user_id):
+    headers = {"Authorization": f"Bearer {access_token}"}
+
     st.title("GitHub Issues Similarity Check")
     col1, col2 = st.columns(2)
     unique_pairs = get_unique_owner_repo_pairs()
@@ -272,25 +248,47 @@ def issuesearch(token, user_id):
 
                 summary_key = f"summary_{issue['number']}"
                 if st.session_state.get(summary_key):
-                    st.markdown(f"<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{st.session_state[summary_key]}</div>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{st.session_state[summary_key]}</div>",
+                        unsafe_allow_html=True,
+                    )
                 else:
-                    if st.button("Reveal the Essence.", key=f"summary_button_{issue['number']}"):
+                    if st.button(
+                        "Reveal the Essence.", key=f"summary_button_{issue['number']}"
+                    ):
                         with st.spinner("Generating summary..."):
                             summary = get_summary(issue_body)
                             st.session_state[summary_key] = summary
-                            st.markdown(f"<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{summary}</div>", unsafe_allow_html=True)
+                            st.markdown(
+                                f"<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{summary}</div>",
+                                unsafe_allow_html=True,
+                            )
                             st.experimental_rerun()
 
                 if st.button(f"Find similar issues for {issue_title}"):
-                    similar_issues = get_similar_issues(issue_body, selected_owner, selected_repo)
-                    if similar_issues != 'None LOL' and similar_issues != []:
+                    embeddings = get_embeddings(issue_body)
+                    response = requests.get(
+                        f"{PREFIX}/similar_issues",
+                        params={
+                            "embedded_issue_text_dict": str(embeddings),
+                            "selected_owner": selected_owner,
+                            "selected_repo": selected_repo,
+                        },
+                        headers=headers,
+                    )
+                    if response.status_code == 200:
+                        similar_issues = response.json()
+                    else:
+                        st.write(f"Error: {response.status_code}")
+                        similar_issues = "None LOL"
+                    if similar_issues != "None LOL" and similar_issues != []:
                         similar_issues_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Similar Issues</h4>"
                         for similar_issue in similar_issues:
-                            title = similar_issue['title']
-                            issue_id = similar_issue['id']
-                            similarity = similar_issue['similarity']
+                            title = similar_issue["title"]
+                            issue_id = similar_issue["id"]
+                            similarity = similar_issue["similarity"]
                             similarity_html = f"<span style='color: #39FF14;'>{similarity:.2f}%</span>"
-                            url = similar_issue['url']
+                            url = similar_issue["url"]
                             link_text = f"({url})"
                             link_html = f"<a href='{url}'>{link_text}</a>"
                             issue_html = f"<p>- {title} (#{issue_id}) - {similarity_html} - {link_html}</p>"
@@ -307,6 +305,7 @@ def issuesearch(token, user_id):
                             st.markdown(possible_solution_html, unsafe_allow_html=True)
     else:
         st.write("No issues found.")
+
 
 if __name__ == "__main__":
     issuesearch()
