@@ -5,9 +5,7 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 
-from utils.core_helpers import (
-    get_embeddings,
-)
+from utils.core_helpers import get_embeddings
 
 load_dotenv()
 
