@@ -1,20 +1,20 @@
-from jose import JWTError, jwt
 import re
-from transformers import BertModel, BertTokenizer
-import torch
-import requests
-import openai
-import numpy as np
-import streamlit as st
 
-tokenizer = BertTokenizer.from_pretrained(
-    "bert-base-uncased", max_length=1024
-)
+import numpy as np
+import openai
+import requests
+import streamlit as st
+import torch
+from jose import JWTError, jwt
+from transformers import BertModel, BertTokenizer
+
+tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", max_length=1024)
 model = BertModel.from_pretrained("bert-base-uncased")
 
 model.eval()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def decode_token(token, SECRET_KEY, ALGORITHM):
     try:
@@ -22,7 +22,8 @@ def decode_token(token, SECRET_KEY, ALGORITHM):
         return payload["sub"]
     except:
         return None
-    
+
+
 def preprocess_text(text):
     # Remove URLs
     text = re.sub(
@@ -71,6 +72,7 @@ def bert_embedding(text):
     )
     embedded_text.append(avg_embedding)
     return embedded_text
+
 
 def get_unique_owner_repo_pairs(session):
     result = session.execute(

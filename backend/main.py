@@ -188,7 +188,8 @@ async def get_similar_issues(
         return similar_issues_output
     else:
         return "None LOL"
-    
+
+
 @app.get("/github_search", tags=["Github Issues"])
 async def get_similar_issues(
     embedded_issue_text_dict: str,

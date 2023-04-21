@@ -1,9 +1,17 @@
-import streamlit as st
-import openai
 import os
-from dotenv import load_dotenv
+
+import openai
 import requests
-from utils.core_helpers import get_unique_owner_repo_pairs, get_open_issues, get_summary, get_embeddings, get_possible_solution
+import streamlit as st
+from dotenv import load_dotenv
+
+from utils.core_helpers import (
+    get_embeddings,
+    get_open_issues,
+    get_possible_solution,
+    get_summary,
+    get_unique_owner_repo_pairs,
+)
 
 load_dotenv()
 
@@ -30,27 +38,6 @@ def errorsearch(access_token, user_id):
         else:
             st.write(f"Error: {response.status_code}")
             similar_issues = "None LOL"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":

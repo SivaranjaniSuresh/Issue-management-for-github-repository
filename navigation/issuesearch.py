@@ -1,11 +1,18 @@
 import os
+
 import openai
 import requests
 import streamlit as st
 from dotenv import load_dotenv
 
 from backend.database import SessionLocal
-from utils.core_helpers import get_unique_owner_repo_pairs, get_open_issues, get_summary, get_embeddings, get_possible_solution
+from utils.core_helpers import (
+    get_embeddings,
+    get_open_issues,
+    get_possible_solution,
+    get_summary,
+    get_unique_owner_repo_pairs,
+)
 
 load_dotenv()
 
@@ -14,6 +21,7 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 PREFIX = os.environ.get("PREFIX")
 
 session = SessionLocal()
+
 
 def issuesearch(access_token, user_id):
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -52,7 +60,7 @@ def issuesearch(access_token, user_id):
                         st.write(comment["body"])
                 else:
                     st.write("No Comments.")
-                    
+
                 summary_key = f"summary_{issue['number']}"
                 if st.session_state.get(summary_key):
                     st.markdown(

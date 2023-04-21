@@ -5,8 +5,8 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 
-from navigation.issuesearch import issuesearch
 from navigation.errorsearch import errorsearch
+from navigation.issuesearch import issuesearch
 from utils.core_helpers import decode_token
 
 load_dotenv()
@@ -116,10 +116,7 @@ def signin():
 
 
 # Define the Streamlit pages
-pages = {
-    "Git-Issue-Wizard": issuesearch,
-    "Git-Cognizant": errorsearch
-}
+pages = {"Git-Issue-Wizard": issuesearch, "Git-Cognizant": errorsearch}
 
 
 # Define the Streamlit app
