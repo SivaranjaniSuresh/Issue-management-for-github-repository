@@ -5,13 +5,7 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 
-from utils.core_helpers import (
-    get_embeddings,
-    get_open_issues,
-    get_possible_solution,
-    get_summary,
-    get_unique_owner_repo_pairs,
-)
+from utils.core_helpers import get_embeddings
 
 load_dotenv()
 
