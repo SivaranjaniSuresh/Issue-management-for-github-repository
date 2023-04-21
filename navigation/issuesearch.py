@@ -1,4 +1,3 @@
-import json
 import os
 import re
 
@@ -8,7 +7,6 @@ import requests
 import streamlit as st
 import torch
 from dotenv import load_dotenv
-from pymilvus import Collection, connections
 from transformers import BertModel, BertTokenizer
 
 from backend.database import SessionLocal
@@ -78,39 +76,6 @@ def bert_embedding(text):
     embedded_text.append(avg_embedding)
     return embedded_text
 
-
-def check_similarity(embedded_issue):
-    # Connect to Milvus
-    connections.connect(alias="default", host="34.138.127.169", port="19530")
-    collection_name = "my_collection"
-    collection = Collection(name=collection_name)
-    search_vector = list(embedded_issue.values())[0]
-    top_k = 999
-    anns_field = "embeddings"
-    search_params = {"metric_type": "L2", "params": {"nprobe": 9999}}
-
-    results = collection.search(
-        data=[search_vector], anns_field=anns_field, param=search_params, limit=top_k
-    )
-
-    max_dist = 0
-    filtered_results = []
-
-    for result in results:
-        for match in result:
-            max_dist = max(match.distance, max_dist)
-
-    for result in results:
-        for match in result:
-            similarity = ((max_dist - match.distance) / max_dist) * 100
-            # Round the similarity score to 2 decimal places
-            similarity = round(similarity, 2)
-            if similarity > 90:
-                filtered_results.append({"id": match.id, "similarity": similarity})
-
-    return filtered_results
-
-
 def get_unique_owner_repo_pairs():
     session = SessionLocal()
     result = session.execute(
@@ -125,8 +90,7 @@ def get_issue_comments(issue_url, access_token):
         "Accept": "application/vnd.github+json",
         "Authorization": f"token {access_token}",
     }
-    response = requests.get(issue_url + "/comments", headers=headers)
-
+    response = requests.get(issue_url, headers=headers)
     if response.status_code == 200:
         comments = response.json()
         return comments
@@ -235,7 +199,6 @@ def issuesearch(access_token, user_id):
             issue_title = issue["title"]
             issue_body = issue["body"]
             issue_comments = issue["comments_data"]
-
             with st.expander(issue_title):
                 st.write(issue_body)
                 st.write("Comments:")

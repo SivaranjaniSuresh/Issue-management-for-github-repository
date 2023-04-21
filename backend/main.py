@@ -1,7 +1,7 @@
 import ast
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Union
+from typing import Union
 
 import models
 import schema
