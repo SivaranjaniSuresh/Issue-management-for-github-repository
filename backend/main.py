@@ -74,13 +74,18 @@ def get_logged_in_user(token: str = Depends(oauth2_scheme)):
     return get_username(token, credentials_exception)
 
 
-def get_issue_url(issue_number, repo_owner, repo_name):
+def get_issue_url(issue_number, repo_owner=None, repo_name=None):
     session = SessionLocal()
     try:
-        result = session.execute(
-            f"""SELECT ISSUE_URL, TITLE FROM GITHUB_ISSUES.PUBLIC.ISSUES 
-            WHERE ID = '{issue_number}' AND REPO_OWNER = '{repo_owner}' AND REPO_NAME = '{repo_name}' AND STATE = 'closed'"""
-        )
+        base_query = f"""SELECT ISSUE_URL, TITLE FROM GITHUB_ISSUES.PUBLIC.ISSUES 
+            WHERE ID = '{issue_number}' AND STATE = 'closed'"""
+
+        if repo_owner:
+            base_query += f" AND REPO_OWNER = '{repo_owner}'"
+        if repo_name:
+            base_query += f" AND REPO_NAME = '{repo_name}'"
+
+        result = session.execute(base_query)
         row = result.fetchone()
         return (row[0], row[1]) if row else (None, None)
     finally:
@@ -170,6 +175,32 @@ async def get_similar_issues(
     if similar_issues:
         for issue in similar_issues:
             issue_url, title = get_issue_url(issue["id"], selected_owner, selected_repo)
+            if issue_url:
+                similar_issues_output.append(
+                    {
+                        "title": title,
+                        "id": issue["id"],
+                        "similarity": issue["similarity"],
+                        "url": issue_url,
+                    }
+                )
+    if len(similar_issues_output) > 0:
+        return similar_issues_output
+    else:
+        return "None LOL"
+    
+@app.get("/github_search", tags=["Github Issues"])
+async def get_similar_issues(
+    embedded_issue_text_dict: str,
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_logged_in_user),
+):
+    embedded_issue_text_dict = ast.literal_eval(embedded_issue_text_dict)
+    similar_issues = check_similarity(embedded_issue_text_dict)
+    similar_issues_output = []
+    if similar_issues:
+        for issue in similar_issues:
+            issue_url, title = get_issue_url(issue["id"])
             if issue_url:
                 similar_issues_output.append(
                     {
