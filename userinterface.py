@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 
 from navigation.errorsearch import errorsearch
 from navigation.issuesearch import issuesearch
+from navigation.adminworkarea import adminworkarea
+from navigation.analytics import analytics
 from utils.core_helpers import decode_token
 
 load_dotenv()
@@ -116,8 +118,10 @@ def signin():
 
 
 # Define the Streamlit pages
-pages = {"Git-Issue-Wizard": issuesearch, "Git-Cognizant": errorsearch}
-
+pages = {"Git-Issue-Wizard": issuesearch, 
+         "Git-Cognizant": errorsearch,
+         "Analytics": analytics,
+         "Admin Workarea": adminworkarea}
 
 # Define the Streamlit app
 def main():
@@ -129,8 +133,11 @@ def main():
     user_id = decode_token(token, SECRET_KEY, ALGORITHM)
 
     # Render the navigation sidebar
-    if user_id is not None:
-        selection = st.sidebar.radio("Go to", list(pages.keys()) + ["Log Out"])
+    if user_id is not None and user_id != "damg7245":
+        filtered_pages = [page for page in pages.keys() if page != "Admin Workarea"]
+        selection = st.sidebar.radio("Go to", filtered_pages + ["Log Out"])
+    elif user_id == "damg7245":
+        selection = st.sidebar.radio("Go to", ["Admin Workarea", "Analytics", "Log Out"])
     else:
         selection = st.sidebar.radio("Go to", ["Sign In", "Sign Up"])
 

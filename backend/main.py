@@ -129,6 +129,11 @@ def check_similarity(embedded_issue):
 ###########################################################################################################################################
 @app.post("/signup", status_code=200, response_model=schema.ShowUser, tags=["Users"])
 def signup(user: schema.User, db: Session = Depends(get_db)):
+    existing_user = (
+        db.query(models.User).filter(models.User.username == user.username).first()
+    )
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
     new_user = models.User(
         username=user.username,
         password=Hash.bcrypt(user.password),
