@@ -80,23 +80,12 @@ def issuesearch(access_token, user_id):
                             )
                             st.experimental_rerun()
 
-                if st.button(f"Find similar issues for {issue_title}"):
-                    embeddings = get_embeddings(issue_body)
-                    response = requests.get(
-                        f"{PREFIX}/similar_issues",
-                        params={
-                            "embedded_issue_text_dict": str(embeddings),
-                            "selected_owner": selected_owner,
-                            "selected_repo": selected_repo,
-                        },
-                        headers=headers,
-                    )
-                    if response.status_code == 200:
-                        similar_issues = response.json()
-                    else:
-                        st.write(f"Error: {response.status_code}")
-                        similar_issues = "None LOL"
-                    if similar_issues != "None LOL" and similar_issues != []:
+                st.write("<p></p>", unsafe_allow_html=True)
+                
+                similar_key = f"similar_{issue['number']}"
+                if st.session_state.get(similar_key):
+                    if isinstance(st.session_state[similar_key], list):
+                        similar_issues = st.session_state[similar_key]
                         similar_issues_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Similar Issues</h4>"
                         for similar_issue in similar_issues:
                             title = similar_issue["title"]
@@ -110,14 +99,61 @@ def issuesearch(access_token, user_id):
                             similar_issues_html += issue_html
                         similar_issues_html += "</div>"
                         st.markdown(similar_issues_html, unsafe_allow_html=True)
+                        st.write("<p></p>", unsafe_allow_html=True)
                     else:
                         st.error("No similar closed issue found.")
-                        possible_solution = get_possible_solution(issue_body)
+                        possible_solution = st.session_state[similar_key]
                         if possible_solution:
                             possible_solution_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"
                             possible_solution_html += f"<p>{possible_solution}</p>"
                             possible_solution_html += "</div>"
                             st.markdown(possible_solution_html, unsafe_allow_html=True)
+                            st.write("<p></p>", unsafe_allow_html=True)
+                else:
+                    if st.button(f"Find similar issues for {issue_title}"):
+                        embeddings = get_embeddings(issue_body)
+                        response = requests.get(
+                            f"{PREFIX}/similar_issues",
+                            params={
+                                "embedded_issue_text_dict": str(embeddings),
+                                "selected_owner": selected_owner,
+                                "selected_repo": selected_repo,
+                            },
+                            headers=headers,
+                        )
+                        if response.status_code == 200:
+                            similar_issues = response.json()
+                        else:
+                            st.write(f"Error: {response.status_code}")
+                            similar_issues = "None LOL"
+                        if similar_issues != "None LOL" and similar_issues != []:
+                            st.session_state[similar_key] = similar_issues
+                            similar_issues_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Similar Issues</h4>"
+                            for similar_issue in similar_issues:
+                                title = similar_issue["title"]
+                                issue_id = similar_issue["id"]
+                                similarity = similar_issue["similarity"]
+                                similarity_html = f"<span style='color: #39FF14;'>{similarity:.2f}%</span>"
+                                url = similar_issue["url"]
+                                link_text = f"({url})"
+                                link_html = f"<a href='{url}'>{link_text}</a>"
+                                issue_html = f"<p>- {title} (#{issue_id}) - {similarity_html} - {link_html}</p>"
+                                similar_issues_html += issue_html
+                            similar_issues_html += "</div>"
+                            st.markdown(similar_issues_html, unsafe_allow_html=True)
+                            st.write("<p></p>", unsafe_allow_html=True)
+                            st.experimental_rerun()
+                        else:
+                            st.error("No similar closed issue found.")
+                            possible_solution = get_possible_solution(issue_body)
+                            st.session_state[similar_key] = possible_solution
+                            if possible_solution:
+                                possible_solution_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"
+                                possible_solution_html += f"<p>{possible_solution}</p>"
+                                possible_solution_html += "</div>"
+                                st.markdown(possible_solution_html, unsafe_allow_html=True)
+                                st.write("<p></p>", unsafe_allow_html=True)
+                                st.experimental_rerun()
     else:
         st.write("No issues found.")
 
