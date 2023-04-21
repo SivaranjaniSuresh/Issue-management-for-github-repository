@@ -81,7 +81,7 @@ def issuesearch(access_token, user_id):
                             st.experimental_rerun()
 
                 st.write("<p></p>", unsafe_allow_html=True)
-                
+
                 similar_key = f"similar_{issue['number']}"
                 if st.session_state.get(similar_key):
                     if isinstance(st.session_state[similar_key], list):
@@ -151,7 +151,9 @@ def issuesearch(access_token, user_id):
                                 possible_solution_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"
                                 possible_solution_html += f"<p>{possible_solution}</p>"
                                 possible_solution_html += "</div>"
-                                st.markdown(possible_solution_html, unsafe_allow_html=True)
+                                st.markdown(
+                                    possible_solution_html, unsafe_allow_html=True
+                                )
                                 st.write("<p></p>", unsafe_allow_html=True)
                                 st.experimental_rerun()
     else:
