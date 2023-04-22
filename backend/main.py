@@ -35,20 +35,20 @@ app = FastAPI()
 models.Base.metadata.create_all(engine)
 
 # For Local
-#####################################################################################################################################
+####################################################################################################################################
 tokenizer = BertTokenizer.from_pretrained(
-     "bert-base-uncased", max_length=1024
- )
-model = BertModel.from_pretrained("bert-base-uncased")
-#####################################################################################################################################
+    "./bert-base-uncased-tokenizer", max_length=1024
+)
+model = BertModel.from_pretrained("./bert-base-uncased")
+####################################################################################################################################
 
 # For Global
-#####################################################################################################################################
-#tokenizer = BertTokenizer.from_pretrained(
-#    "/app/bert-base-uncased-tokenizer", max_length=1024
-#)
-#model = BertModel.from_pretrained("/app/bert-base-uncased")
-#####################################################################################################################################
+# #####################################################################################################################################
+# tokenizer = BertTokenizer.from_pretrained(
+#     "/app/bert-base-uncased-tokenizer", max_length=1024
+# )
+# model = BertModel.from_pretrained("/app/bert-base-uncased")
+# #####################################################################################################################################
 
 model.eval()
 
@@ -262,8 +262,6 @@ def signin(
 ###########################################################################################################################################
 ## Github API Endpoints
 ###########################################################################################################################################
-
-
 @app.post("/get_similar_issues/", tags=["Github Issues"])
 async def get_similar_issues(
     request_data: Dict,
@@ -273,6 +271,15 @@ async def get_similar_issues(
     issue_body = request_data["issue_body"]
     selected_owner = request_data["selected_owner"]
     selected_repo = request_data["selected_repo"]
+
+    # Log the activity
+    activity = models.UserActivity(
+        username=current_user,
+        request_type="POST",
+        api_endpoint="get_similar_issues",
+        response_code="200",
+        description="",
+    )
 
     embedded_issue_text_dict = get_embeddings(issue_body)
     similar_issues = check_similarity(embedded_issue_text_dict)
@@ -289,9 +296,17 @@ async def get_similar_issues(
                         "url": issue_url,
                     }
                 )
+
     if len(similar_issues_output) > 0:
+        activity.description = f"Found {len(similar_issues_output)} similar issues"
+        db.add(activity)
+        db.commit()
         return similar_issues_output
     else:
+        activity.description = "No similar issues found"
+        activity.response_code = "204"
+        db.add(activity)
+        db.commit()
         return "None LOL"
 
 
@@ -302,6 +317,15 @@ async def get_github_solutions(
     current_user: schema.User = Depends(get_logged_in_user),
 ):
     user_input = request_data["user_input"]
+
+    # Log the activity
+    activity = models.UserActivity(
+        username=current_user,
+        request_type="POST",
+        api_endpoint="get_github_solutions",
+        response_code="200",
+        description="",
+    )
 
     embedded_issue_text_dict = get_embeddings(user_input)
     similar_issues = check_similarity(embedded_issue_text_dict)
@@ -318,11 +342,18 @@ async def get_github_solutions(
                         "url": issue_url,
                     }
                 )
+
     if len(similar_issues_output) > 0:
+        activity.description = f"Found {len(similar_issues_output)} similar issues"
+        db.add(activity)
+        db.commit()
         return similar_issues_output
     else:
+        activity.description = "No similar issues found"
+        activity.response_code = "204"
+        db.add(activity)
+        db.commit()
         return "None LOL"
-
 
 ###########################################################################################################################################
 ## Github - OpenAI Prompt Engineering
@@ -334,6 +365,16 @@ async def get_summary(
     current_user: schema.User = Depends(get_logged_in_user),
 ):
     text = request_data["text"]
+
+    # Log the activity
+    activity = models.UserActivity(
+        username=current_user,
+        request_type="POST",
+        api_endpoint="get_issue_summary",
+        response_code="200",
+        description="",
+    )
+
     prompt = f"Please analyze the following GitHub issue body and provide a detailed summary of the problem. Please note that we are only looking for a summary and not a solution or any additional information. Thank you. ONLY SUMMARY.\n\nIssue Body: {text}\n\n"
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -346,8 +387,13 @@ async def get_summary(
         stop=None,
         temperature=0.6,
     )
-    return response.choices[0].message["content"].strip()
+    summary = response.choices[0].message["content"].strip()
 
+    activity.description = "Generated summary for issue"
+    db.add(activity)
+    db.commit()
+
+    return summary
 
 @app.post("/get_possible_solution/", tags=["OpenAI-Github"])
 async def get_possible_solution(
@@ -356,6 +402,16 @@ async def get_possible_solution(
     current_user: schema.User = Depends(get_logged_in_user),
 ):
     text = request_data["text"]
+
+    # Log the activity
+    activity = models.UserActivity(
+        username=current_user,
+        request_type="POST",
+        api_endpoint="get_possible_solution",
+        response_code="200",
+        description="",
+    )
+
     prompt = f"What is a possible solution to the following GitHub issue? Please provide a very detailed and instructive solution, or if there are no questions to answer in the issue, suggest some potential solutions or explain why a solution may not be feasible. If you are unsure, please provide any insights or suggestions that may be helpful in resolving the issue. Thank you for your contribution!.\n\n Github Issue:{text}\n\n"
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -368,4 +424,10 @@ async def get_possible_solution(
         stop=None,
         temperature=0.6,
     )
-    return response.choices[0].message["content"].strip()
+    solution = response.choices[0].message["content"].strip()
+
+    activity.description = "Generated possible solution for issue"
+    db.add(activity)
+    db.commit()
+
+    return solution
