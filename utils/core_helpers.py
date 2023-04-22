@@ -1,4 +1,3 @@
-import openai
 import requests
 from jose import JWTError, jwt
 
@@ -54,19 +53,3 @@ def get_open_issues(owner, repo, access_token, page, per_page=10):
     else:
         print(f"Error {response.status_code}: Failed to fetch issues")
         return []
-
-
-def get_possible_solution(text):
-    prompt = f"What is a possible solution to the following GitHub issue? Please provide a detailed solution, or if there are no questions to answer in the issue, suggest some potential solutions or explain why a solution may not be feasible. If you are unsure, please provide any insights or suggestions that may be helpful in resolving the issue. Thank you for your contribution!.\n\n Github Issue:{text}\n\n"
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=512,
-        n=1,
-        stop=None,
-        temperature=0.6,
-    )
-    return response.choices[0].message["content"].strip()

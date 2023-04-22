@@ -1,6 +1,5 @@
 import os
 
-import openai
 import requests
 import streamlit as st
 from dotenv import load_dotenv
@@ -8,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GITHUB_ACCESS_TOKEN = os.environ.get("access_token")
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+
 PREFIX = os.environ.get("PREFIX")
 
 

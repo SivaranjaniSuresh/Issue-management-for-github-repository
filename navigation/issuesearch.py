@@ -1,6 +1,5 @@
 import os
 
-import openai
 import requests
 import streamlit as st
 from dotenv import load_dotenv
@@ -11,7 +10,6 @@ from utils.core_helpers import get_open_issues, get_unique_owner_repo_pairs
 load_dotenv()
 
 GITHUB_ACCESS_TOKEN = os.environ.get("access_token")
-openai.api_key = os.environ.get("OPENAI_API_KEY")
 PREFIX = os.environ.get("PREFIX")
 
 session = SessionLocal()
