@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 
 from backend.database import SessionLocal
 from utils.core_helpers import (
-    get_embeddings,
     get_open_issues,
     get_possible_solution,
     get_summary,
@@ -111,11 +110,10 @@ def issuesearch(access_token, user_id):
                             st.write("<p></p>", unsafe_allow_html=True)
                 else:
                     if st.button(f"Find similar issues for {issue_title}"):
-                        embeddings = get_embeddings(issue_body)
                         response = requests.get(
                             f"{PREFIX}/similar_issues",
                             params={
-                                "embedded_issue_text_dict": str(embeddings),
+                                "issue_body": issue_body,
                                 "selected_owner": selected_owner,
                                 "selected_repo": selected_repo,
                             },
