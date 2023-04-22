@@ -25,6 +25,7 @@ from transformers import BertModel, BertTokenizer
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ALGORITHM = os.environ.get("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES"))
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 #####################################################################################################################################
 ## FastAPI Initialization, Model Loading and Table Creation
@@ -33,11 +34,22 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES"))
 app = FastAPI()
 models.Base.metadata.create_all(engine)
 
-tokenizer = BertTokenizer.from_pretrained(
-    "./bert-base-uncased-tokenizer", max_length=1024
-)
+# For Local
+#####################################################################################################################################
+# tokenizer = BertTokenizer.from_pretrained(
+#     "./bert-base-uncased-tokenizer", max_length=1024
+# )
+# model = BertModel.from_pretrained("./bert-base-uncased")
+#####################################################################################################################################
 
-model = BertModel.from_pretrained("./bert-base-uncased")
+# For Global
+#####################################################################################################################################
+tokenizer = BertTokenizer.from_pretrained(
+    "/app/bert-base-uncased-tokenizer", max_length=1024
+)
+model = BertModel.from_pretrained("/app/bert-base-uncased")
+#####################################################################################################################################
+
 model.eval()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

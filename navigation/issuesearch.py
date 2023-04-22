@@ -6,11 +6,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from backend.database import SessionLocal
-from utils.core_helpers import (
-    get_open_issues,
-    get_possible_solution,
-    get_unique_owner_repo_pairs,
-)
+from utils.core_helpers import get_open_issues, get_unique_owner_repo_pairs
 
 load_dotenv()
 
