@@ -1,0 +1,5 @@
+docker tag fastapi:v1 iamkaran1509/fastapi:latest
+docker tag issuesearch:v1 iamkaran1509/issuesearch:latest
+
+docker push iamkaran1509/fastapi:latest
+docker push iamkaran1509/issuesearch:latest

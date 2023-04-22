@@ -1,23 +1,15 @@
 import os
 
-import openai
 import requests
 import streamlit as st
 from dotenv import load_dotenv
 
 from backend.database import SessionLocal
-from utils.core_helpers import (
-    get_embeddings,
-    get_open_issues,
-    get_possible_solution,
-    get_summary,
-    get_unique_owner_repo_pairs,
-)
+from utils.core_helpers import get_open_issues, get_unique_owner_repo_pairs
 
 load_dotenv()
 
 GITHUB_ACCESS_TOKEN = os.environ.get("access_token")
-openai.api_key = os.environ.get("OPENAI_API_KEY")
 PREFIX = os.environ.get("PREFIX")
 
 session = SessionLocal()
@@ -72,7 +64,16 @@ def issuesearch(access_token, user_id):
                         "Reveal the Essence.", key=f"summary_button_{issue['number']}"
                     ):
                         with st.spinner("Generating summary..."):
-                            summary = get_summary(issue_body)
+                            response = requests.post(
+                                f"{PREFIX}/get_issue_summary/",
+                                json={"text": issue_body, "comments": issue_comments},
+                                headers=headers,
+                            )
+                            if response.status_code == 200:
+                                summary = response.text
+                            else:
+                                st.write(f"Error: {response.status_code}")
+                                summary = "No Summary Extracted"
                             st.session_state[summary_key] = summary
                             st.markdown(
                                 f"<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{summary}</div>",
@@ -111,14 +112,14 @@ def issuesearch(access_token, user_id):
                             st.write("<p></p>", unsafe_allow_html=True)
                 else:
                     if st.button(f"Find similar issues for {issue_title}"):
-                        embeddings = get_embeddings(issue_body)
-                        response = requests.get(
-                            f"{PREFIX}/similar_issues",
-                            params={
-                                "embedded_issue_text_dict": str(embeddings),
-                                "selected_owner": selected_owner,
-                                "selected_repo": selected_repo,
-                            },
+                        json_data = {
+                            "issue_body": issue_body,
+                            "selected_owner": selected_owner,
+                            "selected_repo": selected_repo,
+                        }
+                        response = requests.post(
+                            f"{PREFIX}/get_similar_issues/",
+                            json=json_data,
                             headers=headers,
                         )
                         if response.status_code == 200:
@@ -145,7 +146,18 @@ def issuesearch(access_token, user_id):
                             st.experimental_rerun()
                         else:
                             st.error("No similar closed issue found.")
-                            possible_solution = get_possible_solution(issue_body)
+
+                            response = requests.post(
+                                f"{PREFIX}/get_possible_solution/",
+                                json={"text": issue_body, "comments": issue_comments},
+                                headers=headers,
+                            )
+                            if response.status_code == 200:
+                                possible_solution = response.text
+                            else:
+                                st.write(f"Error: {response.status_code}")
+                                possible_solution = "No Possible Solution"
+
                             st.session_state[similar_key] = possible_solution
                             if possible_solution:
                                 possible_solution_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"

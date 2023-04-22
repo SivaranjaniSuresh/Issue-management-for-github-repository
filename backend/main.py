@@ -1,10 +1,14 @@
-import ast
 import os
+import re
 from datetime import datetime, timedelta
-from typing import Union
+from typing import Dict, Union
 
 import models
+import numpy as np
+import openai
 import schema
+import streamlit as st
+import torch
 from database import SessionLocal, engine
 from fastapi import Body, Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -12,6 +16,7 @@ from hashing import Hash
 from jose import JWTError, jwt
 from pymilvus import Collection, connections
 from sqlalchemy.orm import Session
+from transformers import BertModel, BertTokenizer
 
 #####################################################################################################################################
 ## Environment Variables
@@ -20,13 +25,34 @@ from sqlalchemy.orm import Session
 SECRET_KEY = os.environ.get("SECRET_KEY")
 ALGORITHM = os.environ.get("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES"))
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 #####################################################################################################################################
-## FastAPI Initialization and Table Creation
+## FastAPI Initialization, Model Loading and Table Creation
 #####################################################################################################################################
 
 app = FastAPI()
 models.Base.metadata.create_all(engine)
+
+# For Local
+#####################################################################################################################################
+# tokenizer = BertTokenizer.from_pretrained(
+#     "./bert-base-uncased-tokenizer", max_length=1024
+# )
+# model = BertModel.from_pretrained("./bert-base-uncased")
+#####################################################################################################################################
+
+# For Global
+#####################################################################################################################################
+tokenizer = BertTokenizer.from_pretrained(
+    "/app/bert-base-uncased-tokenizer", max_length=1024
+)
+model = BertModel.from_pretrained("/app/bert-base-uncased")
+#####################################################################################################################################
+
+model.eval()
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 ###########################################################################################################################################
@@ -92,6 +118,56 @@ def get_issue_url(issue_number, repo_owner=None, repo_name=None):
         session.close()
 
 
+def preprocess_text(text):
+    # Remove URLs
+    text = re.sub(
+        r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
+        "",
+        text,
+    )
+    # Tokenize the text using the BERT tokenizer
+    tokens = tokenizer.tokenize(text)
+
+    # Convert tokens to IDs
+    token_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+    return token_ids
+
+
+def bert_embedding(text):
+    max_chunk_size = 512
+    embedded_text = []
+    if isinstance(text, list):
+        text = text[0]
+    token_ids = list(map(int, text.split()))
+
+    if len(token_ids) < max_chunk_size:
+        token_id_chunks = [token_ids]
+    else:
+        token_id_chunks = [
+            token_ids[i : i + max_chunk_size]
+            for i in range(0, len(token_ids), max_chunk_size)
+        ]
+
+    chunk_embeddings = []
+    with torch.no_grad():
+        for chunk in token_id_chunks:
+            if not chunk:
+                continue
+            embedding = (
+                model(torch.tensor(chunk).unsqueeze(0).to(device))[1]
+                .squeeze()
+                .cpu()
+                .numpy()
+            )
+            chunk_embeddings.append(embedding)
+    avg_embedding = (
+        np.zeros(768) if not chunk_embeddings else np.mean(chunk_embeddings, axis=0)
+    )
+    embedded_text.append(avg_embedding)
+    return embedded_text
+
+
 def check_similarity(embedded_issue):
     # Connect to Milvus
     connections.connect(alias="default", host="34.138.127.169", port="19530")
@@ -122,6 +198,23 @@ def check_similarity(embedded_issue):
                 filtered_results.append({"id": match.id, "similarity": similarity})
 
     return filtered_results
+
+
+def get_embeddings(issue_text):
+    tokenized_issue_text = []
+    with st.spinner("Pre-processing Issue Text..."):
+        preprocessed_issue_text = preprocess_text(issue_text)
+        tokenized_text = " ".join(
+            [str(token_id) for token_id in preprocessed_issue_text]
+        )
+        tokenized_issue_text.append(tokenized_text)
+
+    with st.spinner("Embedding Issue Text..."):
+        embedded_issue_text = bert_embedding(tokenized_issue_text)
+        embedded_issue_text_dict = {
+            i: list(embedding) for i, embedding in enumerate(embedded_issue_text)
+        }
+    return embedded_issue_text_dict
 
 
 ###########################################################################################################################################
@@ -166,15 +259,22 @@ def signin(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.get("/similar_issues", tags=["Github Issues"])
+###########################################################################################################################################
+## Github API Endpoints
+###########################################################################################################################################
+
+
+@app.post("/get_similar_issues/", tags=["Github Issues"])
 async def get_similar_issues(
-    embedded_issue_text_dict: str,
-    selected_owner: str,
-    selected_repo: str,
+    request_data: Dict,
     db: Session = Depends(get_db),
     current_user: schema.User = Depends(get_logged_in_user),
 ):
-    embedded_issue_text_dict = ast.literal_eval(embedded_issue_text_dict)
+    issue_body = request_data["issue_body"]
+    selected_owner = request_data["selected_owner"]
+    selected_repo = request_data["selected_repo"]
+
+    embedded_issue_text_dict = get_embeddings(issue_body)
     similar_issues = check_similarity(embedded_issue_text_dict)
     similar_issues_output = []
     if similar_issues:
@@ -195,13 +295,15 @@ async def get_similar_issues(
         return "None LOL"
 
 
-@app.get("/github_search", tags=["Github Issues"])
-async def get_similar_issues(
-    embedded_issue_text_dict: str,
+@app.post("/get_github_solutions/", tags=["Github Issues"])
+async def get_github_solutions(
+    request_data: Dict,
     db: Session = Depends(get_db),
     current_user: schema.User = Depends(get_logged_in_user),
 ):
-    embedded_issue_text_dict = ast.literal_eval(embedded_issue_text_dict)
+    user_input = request_data["user_input"]
+
+    embedded_issue_text_dict = get_embeddings(user_input)
     similar_issues = check_similarity(embedded_issue_text_dict)
     similar_issues_output = []
     if similar_issues:
@@ -220,3 +322,50 @@ async def get_similar_issues(
         return similar_issues_output
     else:
         return "None LOL"
+
+
+###########################################################################################################################################
+## Github - OpenAI Prompt Engineering
+###########################################################################################################################################
+@app.post("/get_issue_summary/", tags=["OpenAI-Github"])
+async def get_summary(
+    request_data: Dict,
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_logged_in_user),
+):
+    text = request_data["text"]
+    prompt = f"Please analyze the following GitHub issue body and provide a brief and concise summary of the problem. Please note that we are only looking for a summary and not a solution or any additional information. Thank you. ONLY SUMMARY.\n\nIssue Body: {text}\n\n"
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=512,
+        n=1,
+        stop=None,
+        temperature=0.6,
+    )
+    return response.choices[0].message["content"].strip()
+
+
+@app.post("/get_possible_solution/", tags=["OpenAI-Github"])
+async def get_possible_solution(
+    request_data: Dict,
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_logged_in_user),
+):
+    text = request_data["text"]
+    prompt = f"What is a possible solution to the following GitHub issue? Please provide a detailed solution, or if there are no questions to answer in the issue, suggest some potential solutions or explain why a solution may not be feasible. If you are unsure, please provide any insights or suggestions that may be helpful in resolving the issue. Thank you for your contribution!.\n\n Github Issue:{text}\n\n"
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=512,
+        n=1,
+        stop=None,
+        temperature=0.6,
+    )
+    return response.choices[0].message["content"].strip()
