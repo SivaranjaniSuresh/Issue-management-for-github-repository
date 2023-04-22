@@ -1,11 +1,11 @@
-import ast
 import os
 import re
 from datetime import datetime, timedelta
-from typing import Union
+from typing import Dict, Union
 
 import models
 import numpy as np
+import openai
 import schema
 import streamlit as st
 import torch
@@ -27,7 +27,7 @@ ALGORITHM = os.environ.get("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES"))
 
 #####################################################################################################################################
-## FastAPI Initialization and Table Creation
+## FastAPI Initialization, Model Loading and Table Creation
 #####################################################################################################################################
 
 app = FastAPI()
@@ -252,14 +252,16 @@ def signin(
 ###########################################################################################################################################
 
 
-@app.get("/similar_issues", tags=["Github Issues"])
+@app.post("/get_similar_issues/", tags=["Github Issues"])
 async def get_similar_issues(
-    issue_body: str,
-    selected_owner: str,
-    selected_repo: str,
+    request_data: Dict,
     db: Session = Depends(get_db),
     current_user: schema.User = Depends(get_logged_in_user),
 ):
+    issue_body = request_data["issue_body"]
+    selected_owner = request_data["selected_owner"]
+    selected_repo = request_data["selected_repo"]
+
     embedded_issue_text_dict = get_embeddings(issue_body)
     similar_issues = check_similarity(embedded_issue_text_dict)
     similar_issues_output = []
@@ -281,12 +283,14 @@ async def get_similar_issues(
         return "None LOL"
 
 
-@app.get("/github_search", tags=["Github Issues"])
-async def get_similar_issues(
-    user_input: str,
+@app.post("/get_github_solutions/", tags=["Github Issues"])
+async def get_github_solutions(
+    request_data: Dict,
     db: Session = Depends(get_db),
     current_user: schema.User = Depends(get_logged_in_user),
 ):
+    user_input = request_data["user_input"]
+
     embedded_issue_text_dict = get_embeddings(user_input)
     similar_issues = check_similarity(embedded_issue_text_dict)
     similar_issues_output = []
@@ -306,3 +310,50 @@ async def get_similar_issues(
         return similar_issues_output
     else:
         return "None LOL"
+
+
+###########################################################################################################################################
+## Github - OpenAI Prompt Engineering
+###########################################################################################################################################
+@app.post("/get_issue_summary/", tags=["OpenAI-Github"])
+async def get_summary(
+    request_data: Dict,
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_logged_in_user),
+):
+    text = request_data["text"]
+    prompt = f"Please analyze the following GitHub issue body and provide a brief and concise summary of the problem. Please note that we are only looking for a summary and not a solution or any additional information. Thank you. ONLY SUMMARY.\n\nIssue Body: {text}\n\n"
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=512,
+        n=1,
+        stop=None,
+        temperature=0.6,
+    )
+    return response.choices[0].message["content"].strip()
+
+
+@app.post("/get_possible_solution/", tags=["OpenAI-Github"])
+async def get_possible_solution(
+    request_data: Dict,
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_logged_in_user),
+):
+    text = request_data["text"]
+    prompt = f"What is a possible solution to the following GitHub issue? Please provide a detailed solution, or if there are no questions to answer in the issue, suggest some potential solutions or explain why a solution may not be feasible. If you are unsure, please provide any insights or suggestions that may be helpful in resolving the issue. Thank you for your contribution!.\n\n Github Issue:{text}\n\n"
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        max_tokens=512,
+        n=1,
+        stop=None,
+        temperature=0.6,
+    )
+    return response.choices[0].message["content"].strip()
