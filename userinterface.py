@@ -119,7 +119,7 @@ def signin():
 
 # Define the Streamlit pages
 pages = {
-    "Git-Issue-Wizard": issuesearch,
+    "Git-Magnet": issuesearch,
     "Git-Cognizant": errorsearch,
     "Analytics": analytics,
     "Admin Workarea": adminworkarea,
