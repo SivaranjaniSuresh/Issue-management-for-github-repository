@@ -35,7 +35,6 @@ app = FastAPI()
 models.Base.metadata.create_all(engine)
 
 # For Local
-<<<<<<< HEAD
 ####################################################################################################################################
 tokenizer = BertTokenizer.from_pretrained(
     "./bert-base-uncased-tokenizer", max_length=1024
@@ -50,22 +49,6 @@ model = BertModel.from_pretrained("./bert-base-uncased")
 # )
 # model = BertModel.from_pretrained("/app/bert-base-uncased")
 # #####################################################################################################################################
-=======
-#####################################################################################################################################
-tokenizer = BertTokenizer.from_pretrained(
-     "bert-base-uncased", max_length=1024
- )
-model = BertModel.from_pretrained("bert-base-uncased")
-#####################################################################################################################################
-
-# For Global
-#####################################################################################################################################
-#tokenizer = BertTokenizer.from_pretrained(
-#    "/app/bert-base-uncased-tokenizer", max_length=1024
-#)
-#model = BertModel.from_pretrained("/app/bert-base-uncased")
-#####################################################################################################################################
->>>>>>> 9ccbca19d08d6791366bdb15e7d0b3273d21c6bc
 
 model.eval()
 
