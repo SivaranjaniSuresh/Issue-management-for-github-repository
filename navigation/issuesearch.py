@@ -56,7 +56,7 @@ def issuesearch(access_token, user_id):
                 summary_key = f"summary_{issue['number']}"
                 if st.session_state.get(summary_key):
                     st.markdown(
-                        f"<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{st.session_state[summary_key]}</div>",
+                        "<div style='border: 1px dotted #FFC000; padding: 10px; border-radius: 10px;'><h4>Summary</h4>" + st.session_state[summary_key] + "</div>",
                         unsafe_allow_html=True,
                     )
                 else:
@@ -70,13 +70,13 @@ def issuesearch(access_token, user_id):
                                 headers=headers,
                             )
                             if response.status_code == 200:
-                                summary = response.text
+                                summary = response.json()
                             else:
                                 st.write(f"Error: {response.status_code}")
                                 summary = "No Summary Extracted"
                             st.session_state[summary_key] = summary
                             st.markdown(
-                                f"<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{summary}</div>",
+                                f"<div style='border: 1px dotted #FFC000; padding: 10px; border-radius: 10px;'><h4>Summary</h4>{summary}</div>",
                                 unsafe_allow_html=True,
                             )
                             st.experimental_rerun()
@@ -87,7 +87,7 @@ def issuesearch(access_token, user_id):
                 if st.session_state.get(similar_key):
                     if isinstance(st.session_state[similar_key], list):
                         similar_issues = st.session_state[similar_key]
-                        similar_issues_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Similar Issues</h4>"
+                        similar_issues_html = "<div style='border: 1px solid #008000; padding: 10px; border-radius: 10px;'><h4>Similar Issues</h4>"
                         for similar_issue in similar_issues:
                             title = similar_issue["title"]
                             issue_id = similar_issue["id"]
@@ -105,7 +105,7 @@ def issuesearch(access_token, user_id):
                         st.error("No similar closed issue found.")
                         possible_solution = st.session_state[similar_key]
                         if possible_solution:
-                            possible_solution_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"
+                            possible_solution_html = "<div style='border: 1px solid #D2042D; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"
                             possible_solution_html += f"<p>{possible_solution}</p>"
                             possible_solution_html += "</div>"
                             st.markdown(possible_solution_html, unsafe_allow_html=True)
@@ -129,7 +129,7 @@ def issuesearch(access_token, user_id):
                             similar_issues = "None LOL"
                         if similar_issues != "None LOL" and similar_issues != []:
                             st.session_state[similar_key] = similar_issues
-                            similar_issues_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Similar Issues</h4>"
+                            similar_issues_html = "<div style='border: 1px solid #008000; padding: 10px; border-radius: 10px;'><h4>Similar Issues</h4>"
                             for similar_issue in similar_issues:
                                 title = similar_issue["title"]
                                 issue_id = similar_issue["id"]
@@ -153,14 +153,14 @@ def issuesearch(access_token, user_id):
                                 headers=headers,
                             )
                             if response.status_code == 200:
-                                possible_solution = response.text
+                                possible_solution = response.json()
                             else:
                                 st.write(f"Error: {response.status_code}")
                                 possible_solution = "No Possible Solution"
 
                             st.session_state[similar_key] = possible_solution
                             if possible_solution:
-                                possible_solution_html = "<div style='border: 1px solid #404040; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"
+                                possible_solution_html = "<div style='border: 1px solid #D2042D; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"
                                 possible_solution_html += f"<p>{possible_solution}</p>"
                                 possible_solution_html += "</div>"
                                 st.markdown(

@@ -35,6 +35,7 @@ app = FastAPI()
 models.Base.metadata.create_all(engine)
 
 # For Local
+<<<<<<< HEAD
 ####################################################################################################################################
 tokenizer = BertTokenizer.from_pretrained(
     "./bert-base-uncased-tokenizer", max_length=1024
@@ -49,6 +50,22 @@ model = BertModel.from_pretrained("./bert-base-uncased")
 # )
 # model = BertModel.from_pretrained("/app/bert-base-uncased")
 # #####################################################################################################################################
+=======
+#####################################################################################################################################
+tokenizer = BertTokenizer.from_pretrained(
+     "bert-base-uncased", max_length=1024
+ )
+model = BertModel.from_pretrained("bert-base-uncased")
+#####################################################################################################################################
+
+# For Global
+#####################################################################################################################################
+#tokenizer = BertTokenizer.from_pretrained(
+#    "/app/bert-base-uncased-tokenizer", max_length=1024
+#)
+#model = BertModel.from_pretrained("/app/bert-base-uncased")
+#####################################################################################################################################
+>>>>>>> 9ccbca19d08d6791366bdb15e7d0b3273d21c6bc
 
 model.eval()
 
@@ -375,14 +392,14 @@ async def get_summary(
         description="",
     )
 
-    prompt = f"Please analyze the following GitHub issue body and provide a brief and concise summary of the problem. Please note that we are only looking for a summary and not a solution or any additional information. Thank you. ONLY SUMMARY.\n\nIssue Body: {text}\n\n"
+    prompt = f"Please analyze the following GitHub issue body and provide a detailed summary of the problem. Please note that we are only looking for a summary and not a solution or any additional information. Thank you. ONLY SUMMARY.\n\nIssue Body: {text}\n\n"
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt},
         ],
-        max_tokens=512,
+        max_tokens=1024,
         n=1,
         stop=None,
         temperature=0.6,
@@ -412,14 +429,14 @@ async def get_possible_solution(
         description="",
     )
 
-    prompt = f"What is a possible solution to the following GitHub issue? Please provide a detailed solution, or if there are no questions to answer in the issue, suggest some potential solutions or explain why a solution may not be feasible. If you are unsure, please provide any insights or suggestions that may be helpful in resolving the issue. Thank you for your contribution!.\n\n Github Issue:{text}\n\n"
+    prompt = f"What is a possible solution to the following GitHub issue? Please provide a very detailed and instructive solution, or if there are no questions to answer in the issue, suggest some potential solutions or explain why a solution may not be feasible. If you are unsure, please provide any insights or suggestions that may be helpful in resolving the issue. Thank you for your contribution!.\n\n Github Issue:{text}\n\n"
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt},
         ],
-        max_tokens=512,
+        max_tokens=1024,
         n=1,
         stop=None,
         temperature=0.6,
