@@ -11,8 +11,8 @@ import streamlit as st
 import torch
 from database import SessionLocal, engine
 from fastapi import Body, Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.encoders import jsonable_encoder
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from hashing import Hash
 from jose import JWTError, jwt
 from pymilvus import Collection, connections
@@ -356,6 +356,7 @@ async def get_github_solutions(
         db.commit()
         return "None LOL"
 
+
 ###########################################################################################################################################
 ## Github - OpenAI Prompt Engineering
 ###########################################################################################################################################
@@ -396,6 +397,7 @@ async def get_summary(
 
     return summary
 
+
 @app.post("/get_possible_solution/", tags=["OpenAI-Github"])
 async def get_possible_solution(
     request_data: Dict,
@@ -432,6 +434,8 @@ async def get_possible_solution(
     db.commit()
 
     return solution
+
+
 ###########################################################################################################################################
 ## Database
 ###########################################################################################################################################

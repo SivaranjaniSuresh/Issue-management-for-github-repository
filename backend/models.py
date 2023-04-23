@@ -1,7 +1,7 @@
 import datetime
+
 from database import Base
-from sqlalchemy import Column, DateTime, Integer, String
-from sqlalchemy import Sequence
+from sqlalchemy import Column, DateTime, Integer, Sequence, String
 
 
 class User(Base):
@@ -12,9 +12,12 @@ class User(Base):
     service = Column(String)
     calls_remaining = Column(Integer)
 
+
 class UserActivity(Base):
     __tablename__ = "LOGS"
-    id = Column(Integer, Sequence('user_activity_id_seq'), primary_key=True, autoincrement=True)
+    id = Column(
+        Integer, Sequence("user_activity_id_seq"), primary_key=True, autoincrement=True
+    )
     username = Column(String(255), nullable=False)
     request_type = Column(String(10), nullable=False)
     api_endpoint = Column(String(255), nullable=False)

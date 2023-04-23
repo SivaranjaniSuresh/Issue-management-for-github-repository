@@ -34,11 +34,15 @@ def errorsearch(access_token, user_id):
                 title = similar_issue["title"]
                 issue_id = similar_issue["id"]
                 similarity = similar_issue["similarity"]
-                similarity_html = f"<span style='color: #39FF14;'>{similarity:.2f}%</span>"
+                similarity_html = (
+                    f"<span style='color: #39FF14;'>{similarity:.2f}%</span>"
+                )
                 url = similar_issue["url"]
                 link_text = f"({url})"
                 link_html = f"<a href='{url}'>{link_text}</a>"
-                issue_html = f"<p>- {title} (#{issue_id}) - {similarity_html} - {link_html}</p>"
+                issue_html = (
+                    f"<p>- {title} (#{issue_id}) - {similarity_html} - {link_html}</p>"
+                )
                 similar_issues_html += issue_html
             similar_issues_html += "</div>"
             st.markdown(similar_issues_html, unsafe_allow_html=True)
@@ -60,10 +64,9 @@ def errorsearch(access_token, user_id):
                 possible_solution_html = "<div style='border: 1px solid #D2042D; padding: 10px; border-radius: 10px;'><h4>Possible Solution</h4>"
                 possible_solution_html += f"<p>{possible_solution}</p>"
                 possible_solution_html += "</div>"
-                st.markdown(
-                    possible_solution_html, unsafe_allow_html=True
-                )
+                st.markdown(possible_solution_html, unsafe_allow_html=True)
                 st.write("<p></p>", unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     errorsearch()

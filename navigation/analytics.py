@@ -1,13 +1,15 @@
+import os
+
 import altair as alt
 import pandas as pd
 import requests
 import streamlit as st
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 PREFIX = os.environ.get("PREFIX")
+
 
 def analytics(access_token, user_id):
     url = PREFIX + "/user_activity"
@@ -40,13 +42,17 @@ def analytics(access_token, user_id):
             .size()
             .reset_index(name="count")
         )
-    
+
         # plot line chart of count by user and date
         chart = (
             alt.Chart(count_by_user_and_date)
             .mark_line()
             .encode(
-                x=alt.X("timestamp:T", axis=alt.Axis(title="Date"), timeUnit='utcyearmonthdatehoursminutes'),
+                x=alt.X(
+                    "timestamp:T",
+                    axis=alt.Axis(title="Date"),
+                    timeUnit="utcyearmonthdatehoursminutes",
+                ),
                 y=alt.Y("count:Q", axis=alt.Axis(title="Number of requests")),
                 color="username:N",
             )
@@ -75,7 +81,7 @@ def analytics(access_token, user_id):
 
         # replace response_code values with Success or Failure
         data["response_code"] = data["response_code"].replace(
-            {200: "Success",204: "No Data Returned", 404: "Failure"}
+            {200: "Success", 204: "No Data Returned", 404: "Failure"}
         )
         # create bar chart of success and failed request counts
         bar_chart_sucess_or_failure = (
@@ -87,7 +93,8 @@ def analytics(access_token, user_id):
                 color=alt.Color(
                     "response_code:N",
                     scale=alt.Scale(
-                        domain=["Success", "No Data Returned", "Failure"], range=["green", "yellow", "red"]
+                        domain=["Success", "No Data Returned", "Failure"],
+                        range=["green", "yellow", "red"],
                     ),
                     legend=None,
                 ),
@@ -97,7 +104,8 @@ def analytics(access_token, user_id):
             )
             .transform_filter(
                 alt.FieldOneOfPredicate(
-                    field="response_code", oneOf=["Success", "No Data Returned", "Failure"]
+                    field="response_code",
+                    oneOf=["Success", "No Data Returned", "Failure"],
                 )
             )
         )
