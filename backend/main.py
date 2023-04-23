@@ -12,6 +12,7 @@ import torch
 from database import SessionLocal, engine
 from fastapi import Body, Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.encoders import jsonable_encoder
 from hashing import Hash
 from jose import JWTError, jwt
 from pymilvus import Collection, connections
@@ -431,3 +432,24 @@ async def get_possible_solution(
     db.commit()
 
     return solution
+###########################################################################################################################################
+## Database
+###########################################################################################################################################
+@app.get("/user_activity")
+async def get_user_activity(
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_logged_in_user),
+):
+    # retrieve all user activity records
+    if current_user == "damg7245":
+        query = db.query(models.UserActivity).all()
+    else:
+        # if the current user is not an admin, filter by username
+        query = (
+            db.query(models.UserActivity)
+            .filter(models.UserActivity.username == current_user)
+            .all()
+        )
+    # return data as JSON
+    data = jsonable_encoder(query)
+    return data
