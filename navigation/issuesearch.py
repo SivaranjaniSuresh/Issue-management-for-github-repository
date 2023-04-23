@@ -56,7 +56,9 @@ def issuesearch(access_token, user_id):
                 summary_key = f"summary_{issue['number']}"
                 if st.session_state.get(summary_key):
                     st.markdown(
-                        "<div style='border: 1px dotted #FFC000; padding: 10px; border-radius: 10px;'><h4>Summary</h4>" + st.session_state[summary_key] + "</div>",
+                        "<div style='border: 1px dotted #FFC000; padding: 10px; border-radius: 10px;'><h4>Summary</h4>"
+                        + st.session_state[summary_key]
+                        + "</div>",
                         unsafe_allow_html=True,
                     )
                 else:
