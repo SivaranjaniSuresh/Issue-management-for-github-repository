@@ -53,4 +53,3 @@ def get_open_issues(owner, repo, access_token, page, per_page=10):
     else:
         print(f"Error {response.status_code}: Failed to fetch issues")
         return []
-

@@ -221,7 +221,12 @@ def get_embeddings(issue_text):
 ###########################################################################################################################################
 ## User API Endpoints
 ###########################################################################################################################################
-@app.post("/signup", status_code=200, response_model=schema.ShowUser, tags=["Users Authentication"])
+@app.post(
+    "/signup",
+    status_code=200,
+    response_model=schema.ShowUser,
+    tags=["Users Authentication"],
+)
 def signup(user: schema.User, db: Session = Depends(get_db)):
     existing_user = (
         db.query(models.User).filter(models.User.username == user.username).first()
@@ -259,6 +264,7 @@ def signin(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 @app.put("/forget-password", tags=["Users Authentication"])
 def update_password(
     username: str,
@@ -275,7 +281,8 @@ def update_password(
         return {"message": "Password updated successfully."}
     else:
         raise HTTPException(status_code=404, detail="User not found.")
-    
+
+
 @app.put("/update_subscription", tags=["Users Authentication"])
 def update_subscription(
     service: str,
@@ -312,6 +319,7 @@ def update_subscription(
         db.commit()
 
         raise HTTPException(status_code=404, detail="User not found.")
+
 
 ###########################################################################################################################################
 ## Github API Endpoints
@@ -443,6 +451,7 @@ async def get_github_solutions(
         db.commit()
         return "None LOL"
 
+
 ###########################################################################################################################################
 ## Github - OpenAI Prompt Engineering
 ###########################################################################################################################################
@@ -573,6 +582,7 @@ async def get_user_activity(
     # return data as JSON
     data = jsonable_encoder(query)
     return data
+
 
 @app.get("/remaining_api_calls", tags=["Database"])
 def get_remaining_calls(
