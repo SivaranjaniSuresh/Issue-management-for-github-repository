@@ -221,7 +221,7 @@ def get_embeddings(issue_text):
 ###########################################################################################################################################
 ## User API Endpoints
 ###########################################################################################################################################
-@app.post("/signup", status_code=200, response_model=schema.ShowUser, tags=["Users"])
+@app.post("/signup", status_code=200, response_model=schema.ShowUser, tags=["Users Authentication"])
 def signup(user: schema.User, db: Session = Depends(get_db)):
     existing_user = (
         db.query(models.User).filter(models.User.username == user.username).first()
@@ -241,7 +241,7 @@ def signup(user: schema.User, db: Session = Depends(get_db)):
     return new_user
 
 
-@app.post("/signin", status_code=200, tags=["Users"])
+@app.post("/signin", status_code=200, tags=["Users Authentication"])
 def signin(
     request: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
@@ -259,7 +259,7 @@ def signin(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.put("/forget-password", tags=["Users"])
+@app.put("/forget-password", tags=["Users Authentication"])
 def update_password(
     username: str,
     password: str,
@@ -276,7 +276,7 @@ def update_password(
     else:
         raise HTTPException(status_code=404, detail="User not found.")
     
-@app.put("/update_subscription", tags=["user"])
+@app.put("/update_subscription", tags=["Users Authentication"])
 def update_subscription(
     service: str,
     calls_remaining: int,
@@ -313,17 +313,6 @@ def update_subscription(
 
         raise HTTPException(status_code=404, detail="User not found.")
 
-@app.get("/remaining_api_calls", tags=["user"])
-def get_remaining_calls(
-    db: Session = Depends(get_db),
-    current_user: schema.User = Depends(get_logged_in_user),
-):
-    existing_user = (
-        db.query(models.User).filter(models.User.username == current_user).first()
-    )
-    remaining_calls = existing_user.calls_remaining
-    return {"remaining_calls": remaining_calls}
-
 ###########################################################################################################################################
 ## Github API Endpoints
 ###########################################################################################################################################
@@ -333,6 +322,20 @@ async def get_similar_issues(
     db: Session = Depends(get_db),
     current_user: schema.User = Depends(get_logged_in_user),
 ):
+    user = db.query(models.User).filter(models.User.username == current_user).first()
+    if user.calls_remaining <= 0:
+        activity = models.UserActivity(
+            username=current_user,
+            request_type="POST",
+            api_endpoint="get_similar_issues",
+            response_code="403",
+            description="Calls remaining exceeded limit",
+        )
+        db.add(activity)
+        db.commit()
+
+        raise HTTPException(status_code=403, detail="Calls remaining exceeded limit")
+
     issue_body = request_data["issue_body"]
     selected_owner = request_data["selected_owner"]
     selected_repo = request_data["selected_repo"]
@@ -362,6 +365,9 @@ async def get_similar_issues(
                     }
                 )
 
+    user.calls_remaining -= 1
+    db.commit()
+
     if len(similar_issues_output) > 0:
         activity.description = f"Found {len(similar_issues_output)} similar issues"
         db.add(activity)
@@ -381,6 +387,20 @@ async def get_github_solutions(
     db: Session = Depends(get_db),
     current_user: schema.User = Depends(get_logged_in_user),
 ):
+    user = db.query(models.User).filter(models.User.username == current_user).first()
+    if user.calls_remaining <= 0:
+        activity = models.UserActivity(
+            username=current_user,
+            request_type="POST",
+            api_endpoint="get_github_solutions",
+            response_code="403",
+            description="Calls remaining exceeded limit",
+        )
+        db.add(activity)
+        db.commit()
+
+        raise HTTPException(status_code=403, detail="Calls remaining exceeded limit")
+
     user_input = request_data["user_input"]
 
     # Log the activity
@@ -408,6 +428,9 @@ async def get_github_solutions(
                     }
                 )
 
+    user.calls_remaining -= 1
+    db.commit()
+
     if len(similar_issues_output) > 0:
         activity.description = f"Found {len(similar_issues_output)} similar issues"
         db.add(activity)
@@ -420,7 +443,6 @@ async def get_github_solutions(
         db.commit()
         return "None LOL"
 
-
 ###########################################################################################################################################
 ## Github - OpenAI Prompt Engineering
 ###########################################################################################################################################
@@ -430,6 +452,20 @@ async def get_summary(
     db: Session = Depends(get_db),
     current_user: schema.User = Depends(get_logged_in_user),
 ):
+    user = db.query(models.User).filter(models.User.username == current_user).first()
+    if user.calls_remaining <= 0:
+        activity = models.UserActivity(
+            username=current_user,
+            request_type="POST",
+            api_endpoint="get_issue_summary",
+            response_code="403",
+            description="Calls remaining exceeded limit",
+        )
+        db.add(activity)
+        db.commit()
+
+        raise HTTPException(status_code=403, detail="Calls remaining exceeded limit")
+
     text = request_data["text"]
 
     # Log the activity
@@ -457,6 +493,7 @@ async def get_summary(
 
     activity.description = "Generated summary for issue"
     db.add(activity)
+    user.calls_remaining -= 1
     db.commit()
 
     return summary
@@ -468,6 +505,20 @@ async def get_possible_solution(
     db: Session = Depends(get_db),
     current_user: schema.User = Depends(get_logged_in_user),
 ):
+    user = db.query(models.User).filter(models.User.username == current_user).first()
+    if user.calls_remaining <= 0:
+        activity = models.UserActivity(
+            username=current_user,
+            request_type="POST",
+            api_endpoint="get_possible_solution",
+            response_code="403",
+            description="Calls remaining exceeded limit",
+        )
+        db.add(activity)
+        db.commit()
+
+        raise HTTPException(status_code=403, detail="Calls remaining exceeded limit")
+
     text = request_data["text"]
 
     # Log the activity
@@ -495,6 +546,7 @@ async def get_possible_solution(
 
     activity.description = "Generated possible solution for issue"
     db.add(activity)
+    user.calls_remaining -= 1
     db.commit()
 
     return solution
@@ -503,7 +555,7 @@ async def get_possible_solution(
 ###########################################################################################################################################
 ## Database
 ###########################################################################################################################################
-@app.get("/user_activity")
+@app.get("/user_activity", tags=["Database"])
 async def get_user_activity(
     db: Session = Depends(get_db),
     current_user: schema.User = Depends(get_logged_in_user),
@@ -521,3 +573,14 @@ async def get_user_activity(
     # return data as JSON
     data = jsonable_encoder(query)
     return data
+
+@app.get("/remaining_api_calls", tags=["Database"])
+def get_remaining_calls(
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_logged_in_user),
+):
+    existing_user = (
+        db.query(models.User).filter(models.User.username == current_user).first()
+    )
+    remaining_calls = existing_user.calls_remaining
+    return {"remaining_calls": remaining_calls}
