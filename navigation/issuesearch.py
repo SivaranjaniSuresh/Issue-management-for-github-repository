@@ -1,5 +1,5 @@
 import os
-
+import re
 import requests
 import streamlit as st
 from dotenv import load_dotenv
@@ -13,6 +13,18 @@ GITHUB_ACCESS_TOKEN = os.environ.get("access_token")
 PREFIX = os.environ.get("PREFIX")
 
 session = SessionLocal()
+
+def replace_image_tags_with_images(text, max_width="100%"):
+    img_tags = re.findall(r'<img[^>]+>', text)
+    
+    for img_tag in img_tags:
+        src = re.search(r'src="([^"]+)"', img_tag)
+        if src:
+            image_url = src.group(1)
+            img_markdown = f'<img src="{image_url}" style="max-width: {max_width};" />'
+            text = text.replace(img_tag, img_markdown)
+    
+    return text
 
 
 def issuesearch(access_token, user_id):
@@ -44,7 +56,8 @@ def issuesearch(access_token, user_id):
             issue_body = issue["body"]
             issue_comments = issue["comments_data"]
             with st.expander(issue_title):
-                st.write(issue_body)
+                issue_body_with_images = replace_image_tags_with_images(issue_body, max_width="100%")
+                st.markdown(issue_body_with_images, unsafe_allow_html=True)
                 st.write("Comments:")
                 if issue_comments:
                     for comment in issue_comments:
