@@ -259,6 +259,70 @@ def signin(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+@app.put("/forget-password", tags=["Users"])
+def update_password(
+    username: str,
+    password: str,
+    db: Session = Depends(get_db),
+):
+    existing_user = (
+        db.query(models.User).filter(models.User.username == username).first()
+    )
+    if existing_user:
+        hashed_password = Hash.bcrypt(password)
+        existing_user.password = hashed_password
+        db.commit()
+        return {"message": "Password updated successfully."}
+    else:
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+@app.put("/update_subscription", tags=["user"])
+def update_subscription(
+    service: str,
+    calls_remaining: int,
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_logged_in_user),
+):
+    # Log the activity
+    activity = models.UserActivity(
+        username=current_user,
+        request_type="PUT",
+        api_endpoint="update_subscription",
+        response_code="200",
+        description="Subscription updated",
+    )
+
+    existing_user = (
+        db.query(models.User).filter(models.User.username == current_user).first()
+    )
+    if existing_user:
+        existing_user.service = service
+        existing_user.calls_remaining = calls_remaining
+        db.commit()
+
+        # Update the description of the activity with the new subscription details
+        activity.description = f"Subscription updated: service={service}, calls_remaining={calls_remaining}"
+        db.add(activity)
+        db.commit()
+        return {"message": "Subscription Updated successfully."}
+    else:
+        activity.description = "User not found"
+        activity.response_code = "404"
+        db.add(activity)
+        db.commit()
+
+        raise HTTPException(status_code=404, detail="User not found.")
+
+@app.get("/remaining_api_calls", tags=["user"])
+def get_remaining_calls(
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_logged_in_user),
+):
+    existing_user = (
+        db.query(models.User).filter(models.User.username == current_user).first()
+    )
+    remaining_calls = existing_user.calls_remaining
+    return {"remaining_calls": remaining_calls}
 
 ###########################################################################################################################################
 ## Github API Endpoints
