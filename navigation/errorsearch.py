@@ -25,6 +25,11 @@ def errorsearch(access_token, user_id):
         )
         if response.status_code == 200:
             similar_issues = response.json()
+        elif response.status_code == 403:
+            similar_issues = "None LOL"
+            st.warning(
+                "API call limit reached. Please consider upgrading your plan for continued access."
+            )
         else:
             st.write(f"Error: {response.status_code}")
             similar_issues = "None LOL"
@@ -49,7 +54,6 @@ def errorsearch(access_token, user_id):
             st.write("<p></p>", unsafe_allow_html=True)
         else:
             st.error("No similar closed issue found.")
-
             response = requests.post(
                 f"{PREFIX}/get_possible_solution/",
                 json={"text": user_input},
@@ -57,6 +61,11 @@ def errorsearch(access_token, user_id):
             )
             if response.status_code == 200:
                 possible_solution = response.json()
+            elif response.status_code == 403:
+                possible_solution = "No Possible Solution"
+                st.warning(
+                    "API call limit reached. Please consider upgrading your plan for continued access."
+                )
             else:
                 st.write(f"Error: {response.status_code}")
                 possible_solution = "No Possible Solution"

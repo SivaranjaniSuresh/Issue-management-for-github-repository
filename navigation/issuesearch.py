@@ -73,6 +73,9 @@ def issuesearch(access_token, user_id):
                             )
                             if response.status_code == 200:
                                 summary = response.json()
+                            elif response.status_code == 403:
+                                summary = "API call limit reached. Please consider upgrading your plan for continued access."
+                                st.warning(summary)
                             else:
                                 st.write(f"Error: {response.status_code}")
                                 summary = "No Summary Extracted"
@@ -126,6 +129,11 @@ def issuesearch(access_token, user_id):
                         )
                         if response.status_code == 200:
                             similar_issues = response.json()
+                        elif response.status_code == 403:
+                            similar_issues = "None LOL"
+                            st.warning(
+                                "API call limit reached. Please consider upgrading your plan for continued access."
+                            )
                         else:
                             st.write(f"Error: {response.status_code}")
                             similar_issues = "None LOL"
@@ -148,7 +156,6 @@ def issuesearch(access_token, user_id):
                             st.experimental_rerun()
                         else:
                             st.error("No similar closed issue found.")
-
                             response = requests.post(
                                 f"{PREFIX}/get_possible_solution/",
                                 json={"text": issue_body, "comments": issue_comments},
@@ -156,6 +163,11 @@ def issuesearch(access_token, user_id):
                             )
                             if response.status_code == 200:
                                 possible_solution = response.json()
+                            elif response.status_code == 403:
+                                possible_solution = "No Possible Solution"
+                                st.warning(
+                                    "API call limit reached. Please consider upgrading your plan for continued access."
+                                )
                             else:
                                 st.write(f"Error: {response.status_code}")
                                 possible_solution = "No Possible Solution"

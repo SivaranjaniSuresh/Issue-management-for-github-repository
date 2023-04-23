@@ -25,10 +25,12 @@ SNOWFLAKE_SCHEMA = os.environ.get("SNOWFLAKE_SCHEMA")
 
 PREFIX = os.environ.get("PREFIX")
 
+
 def remaining_api_calls(headers):
     response = requests.get(f"{PREFIX}/remaining_api_calls", headers=headers).json()
     remaining_calls = response["remaining_calls"]
     return remaining_calls
+
 
 def signup():
     st.title("Sign Up")
@@ -120,6 +122,7 @@ def signin():
         else:
             st.error("Something went wrong")
 
+
 def forget_password():
     st.write("Update Password Here")
     password_regex = "^[a-zA-Z0-9]{8,}$"
@@ -188,7 +191,9 @@ def main():
     # Render the navigation sidebar
     if user_id is not None and user_id != "damg7245":
         filtered_pages = [page for page in pages.keys() if page != "Admin Workarea"]
-        selection = st.sidebar.radio("Go to", filtered_pages + ["Upgrade Subscription" , "Log Out"])
+        selection = st.sidebar.radio(
+            "Go to", filtered_pages + ["Upgrade Subscription", "Log Out"]
+        )
     elif user_id == "damg7245":
         selection = st.sidebar.radio(
             "Go to", ["Admin Workarea", "Analytics", "Log Out"]
