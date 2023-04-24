@@ -23,9 +23,8 @@ PREFIX = os.environ.get("PREFIX")
 session = SessionLocal()
 
 # Set up the model
-model_name = "Rami/multi-label-class-classification-on-github-issues"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSequenceClassification.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained("/app/multi-label-class-classification-on-github-issues-tokenizer")
+model = AutoModelForSequenceClassification.from_pretrained("/app/multi-label-class-classification-on-github-issues")
 
 def replace_image_tags_with_images(text):
     img_tags = re.findall(r'<img[^>]+>', text)

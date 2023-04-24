@@ -1,7 +1,7 @@
 version: '3'
 services:
-  issuesearch:
-    image: issuesearch:v1
+  aissueflow:
+    image: aissueflow:v1
     environment:
       - SNOWFLAKE_ACCOUNT=${SNOWFLAKE_ACCOUNT}
       - SNOWFLAKE_USER=${SNOWFLAKE_USER}
