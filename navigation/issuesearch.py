@@ -4,6 +4,9 @@ import re
 import requests
 import streamlit as st
 from dotenv import load_dotenv
+import json
+import torch
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 from backend.database import SessionLocal
 from utils.core_helpers import (
@@ -19,19 +22,55 @@ PREFIX = os.environ.get("PREFIX")
 
 session = SessionLocal()
 
+# Set up the model
+tokenizer = AutoTokenizer.from_pretrained("/app/multi-label-class-classification-on-github-issues-tokenizer")
+model = AutoModelForSequenceClassification.from_pretrained("/app/multi-label-class-classification-on-github-issues")
 
-def replace_image_tags_with_images(text, max_width="100%"):
-    img_tags = re.findall(r"<img[^>]+>", text)
+def replace_image_tags_with_images(text):
+    img_tags = re.findall(r'<img[^>]+>', text)
 
     for img_tag in img_tags:
         src = re.search(r'src="([^"]+)"', img_tag)
         if src:
             image_url = src.group(1)
-            img_markdown = f'<img src="{image_url}" style="max-width: {max_width};" />'
+            img_markdown = f'<img src="{image_url}" style="width:auto;height:auto;max-width:100%;" />'
             text = text.replace(img_tag, img_markdown)
 
     return text
 
+# Classify an issue using the model
+def classify_issue(issue_text):
+    if not issue_text:
+        return None
+    inputs = tokenizer(issue_text, return_tensors="pt", truncation=True, padding=True)
+    with torch.no_grad():
+        outputs = model(**inputs)
+    logits = outputs.logits
+    probabilities = torch.sigmoid(logits)
+    return probabilities.numpy().flatten()
+
+def display_results(probabilities):
+    if probabilities is None:
+        return []
+    label_list = [
+    "accessibility", "android", "api", "app", "architecture", "assets", "authentication",
+    "automated-tests", "backend", "blog", "bootstrap", "bug", "chat", "chrome-extension",
+    "ci", "clean-code", "code-coverage", "community", "compliance", "console", "css", "data",
+    "database", "dependencies", "design", "devops", "documentation", "docker", "e2e-testing",
+    "easy-pick", "editor", "enhancement", "error-handling", "feature", "frontend", "git",
+    "github-actions", "graphql", "hacktoberfest", "help-wanted", "html", "http", "i18n",
+    "infrastructure", "installation", "integration-tests", "ios", "javascript", "jest",
+    "jquery", "json", "linting", "logging", "macos", "machine-learning", "maintenance",
+    "markdown", "mobile", "monitoring", "new-feature", "node.js", "optimization", "package",
+    "performance", "php", "plugin", "pwa", "python", "question", "rails", "react", "reproducible-builds",
+    "rest-api", "ruby", "scala", "search", "security", "serverless", "setup", "storybook",
+    "testing", "translation", "typescript", "ui", "usability", "user-experience", "visualization",
+    "vue.js", "windows", "workflow", "yaml"
+    ]
+    label_probs = list(zip(label_list, probabilities))
+    label_probs.sort(key=lambda x: x[1], reverse=True)
+    top_3_labels = label_probs[:3]
+    return top_3_labels
 
 def issuesearch(access_token, user_id):
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -95,23 +134,45 @@ def issuesearch(access_token, user_id):
     issues = get_open_issues(selected_owner, selected_repo, GITHUB_ACCESS_TOKEN, page)
     if issues:
         st.write(f"**Open Issues for {selected_owner}/{selected_repo} (Page {page}):**")
+        # Initialize a dictionary to store labeled issues
+        labeled_issues = {}
         for issue in issues:
+            issue_id = issue["id"]
             issue_title = issue["title"]
             issue_body = issue["body"]
             issue_comments = issue["comments_data"]
             with st.expander(issue_title):
-                issue_body_with_images = replace_image_tags_with_images(
-                    issue_body, max_width="100%"
-                )
-                st.markdown(issue_body_with_images, unsafe_allow_html=True)
+                # Check if the issue has already been labeled
+                if issue_id not in labeled_issues:
+                    probabilities = classify_issue(issue["body"])
+                    if probabilities is not None:
+                        top_3_labels = display_results(probabilities * 100)
+                        labeled_issues[issue_id] = top_3_labels
+                    else:
+                        labeled_issues[issue_id] = None
+                # Fetch the labels from the labeled_issues dictionary
+                top_3_labels = labeled_issues[issue_id]
+                
+                if top_3_labels is not None:
+                    label_text = " ".join([f"<code style='background-color: #191D20; color: #228B22; padding: 6px 12px;'>{label}</code>" for label, _ in top_3_labels])
+                else:
+                    label_text = ""
+                st.markdown(f"Possible Labels: {label_text}", unsafe_allow_html=True)
+                st.markdown("<hr>", unsafe_allow_html=True)
+                if issue_body is not None:
+                    issue_body_with_images = replace_image_tags_with_images(issue_body)
+                else:
+                    issue_body_with_images = ""
+                st.markdown(f"<div style='overflow: auto;'>{issue_body_with_images}</div>", unsafe_allow_html=True)
+                st.markdown("<hr>", unsafe_allow_html=True)
                 st.write("Comments:")
                 if issue_comments:
                     for comment in issue_comments:
-                        st.write(comment["user"]["login"] + ":")
+                        st.markdown(f"<span style='color: #800080'>{comment['user']['login']}:</span>", unsafe_allow_html=True)
                         st.write(comment["body"])
                 else:
                     st.write("No Comments.")
-
+                st.markdown("<hr>", unsafe_allow_html=True)
                 summary_key = f"summary_{issue['number']}"
                 if st.session_state.get(summary_key):
                     st.markdown(
