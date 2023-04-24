@@ -1,11 +1,16 @@
 import os
 import re
+
 import requests
 import streamlit as st
 from dotenv import load_dotenv
 
 from backend.database import SessionLocal
-from utils.core_helpers import get_open_issues, get_unique_owner_repo_pairs
+from utils.core_helpers import (
+    get_open_issues,
+    get_remaining_calls,
+    get_unique_owner_repo_pairs,
+)
 
 load_dotenv()
 
@@ -14,22 +19,57 @@ PREFIX = os.environ.get("PREFIX")
 
 session = SessionLocal()
 
+
 def replace_image_tags_with_images(text, max_width="100%"):
-    img_tags = re.findall(r'<img[^>]+>', text)
-    
+    img_tags = re.findall(r"<img[^>]+>", text)
+
     for img_tag in img_tags:
         src = re.search(r'src="([^"]+)"', img_tag)
         if src:
             image_url = src.group(1)
             img_markdown = f'<img src="{image_url}" style="max-width: {max_width};" />'
             text = text.replace(img_tag, img_markdown)
-    
+
     return text
 
 
 def issuesearch(access_token, user_id):
     headers = {"Authorization": f"Bearer {access_token}"}
-
+    remaining_calls = get_remaining_calls(access_token)
+    if remaining_calls is not None:
+        calls_color = "#228B22" if remaining_calls > 5 else "#D2042D"
+        st.markdown(
+            f"""
+            <style>
+                .remaining-calls-container {{
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    width: 100%;
+                    padding: 10px;
+                    background-color: #f0f0f0;
+                    border-radius: 10px;
+                }}
+                .remaining-calls-text {{
+                    font-size: 1.5em;
+                    font-weight: bold;
+                    color: #333;
+                    margin-right: 10px;
+                }}
+                .stMetricValue {{
+                    color: {calls_color};
+                    font-weight: bold;
+                }}
+            </style>
+            <div class="remaining-calls-container">
+                <div class="remaining-calls-text">API Calls Remaining:</div>
+                <div class="stMetric">
+                    <div class="stMetricValue">{remaining_calls}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     st.title("GitHub Issues Similarity Check")
     col1, col2 = st.columns(2)
     unique_pairs = get_unique_owner_repo_pairs(session)
@@ -56,7 +96,9 @@ def issuesearch(access_token, user_id):
             issue_body = issue["body"]
             issue_comments = issue["comments_data"]
             with st.expander(issue_title):
-                issue_body_with_images = replace_image_tags_with_images(issue_body, max_width="100%")
+                issue_body_with_images = replace_image_tags_with_images(
+                    issue_body, max_width="100%"
+                )
                 st.markdown(issue_body_with_images, unsafe_allow_html=True)
                 st.write("Comments:")
                 if issue_comments:

@@ -163,7 +163,7 @@ def upgrade_subscription(token):
         url = f"{PREFIX}/update_subscription?service={service}&calls_remaining={calls_remaining}"
         response = requests.put(url, headers=headers)
         if response.status_code == 200:
-            st.write("Subscription Updated Successfully")
+            st.success("Subscription Updated Successfully")
         elif response.status_code == 404:
             st.error("User not found.")
         else:

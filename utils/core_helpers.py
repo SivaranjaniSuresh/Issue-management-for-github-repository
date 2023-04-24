@@ -1,5 +1,10 @@
+import os
+
 import requests
+import streamlit as st
 from jose import JWTError, jwt
+
+PREFIX = os.environ.get("PREFIX")
 
 
 def decode_token(token, SECRET_KEY, ALGORITHM):
@@ -53,3 +58,18 @@ def get_open_issues(owner, repo, access_token, page, per_page=10):
     else:
         print(f"Error {response.status_code}: Failed to fetch issues")
         return []
+
+
+def get_remaining_calls(access_token):
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(
+        f"{PREFIX}/remaining_api_calls/",
+        headers=headers,
+    )
+
+    if response.status_code == 200:
+        remaining_calls = response.json()["remaining_calls"]
+        return remaining_calls
+    else:
+        st.write(f"Error: {response.status_code}")
+        return None
