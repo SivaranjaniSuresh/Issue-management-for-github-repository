@@ -4,6 +4,8 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 
+from utils.core_helpers import get_remaining_calls
+
 load_dotenv()
 
 GITHUB_ACCESS_TOKEN = os.environ.get("access_token")
@@ -13,7 +15,46 @@ PREFIX = os.environ.get("PREFIX")
 
 def errorsearch(access_token, user_id):
     headers = {"Authorization": f"Bearer {access_token}"}
-    user_input = st.text_area("Describe What Issue you are Facing", height=200)
+    remaining_calls = get_remaining_calls(access_token)
+    if remaining_calls is not None:
+        calls_color = "#228B22" if remaining_calls > 5 else "#D2042D"
+
+        st.write(
+            """
+            <style>
+                .remaining-calls-container {
+                    margin-bottom: 20px;
+                }
+                .remaining-calls-text {
+                    font-size: 1.1em;
+                    font-weight: bold;
+                    color: #FFFFFF;
+                    margin-right: 10px;
+                }
+                .stMetricValue {
+                    color: """
+            + calls_color
+            + """;
+                    font-weight: bold;
+                }
+            </style>
+        """,
+            unsafe_allow_html=True,
+        )
+
+        remaining_calls_container = st.empty()
+        remaining_calls_container.markdown(
+            f"""
+            <div class="remaining-calls-container">
+                <div class="remaining-calls-text">API Calls Remaining:</div>
+                <div class="stMetric">
+                    <div class="stMetricValue">{remaining_calls}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    user_input = st.text_area("Briefly Describe What Issue you are Facing", height=200)
     if st.button("Search for similar Issue on Github"):
         json_data = {
             "user_input": user_input,

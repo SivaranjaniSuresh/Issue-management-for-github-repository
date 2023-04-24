@@ -1,5 +1,6 @@
 import os
 import re
+
 import requests
 import streamlit as st
 from dotenv import load_dotenv
@@ -8,7 +9,11 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 from backend.database import SessionLocal
-from utils.core_helpers import get_open_issues, get_unique_owner_repo_pairs
+from utils.core_helpers import (
+    get_open_issues,
+    get_remaining_calls,
+    get_unique_owner_repo_pairs,
+)
 
 load_dotenv()
 
@@ -70,7 +75,45 @@ def display_results(probabilities):
 
 def issuesearch(access_token, user_id):
     headers = {"Authorization": f"Bearer {access_token}"}
+    remaining_calls = get_remaining_calls(access_token)
+    if remaining_calls is not None:
+        calls_color = "#228B22" if remaining_calls > 5 else "#D2042D"
 
+        st.write(
+            """
+            <style>
+                .remaining-calls-container {
+                    margin-bottom: 20px;
+                }
+                .remaining-calls-text {
+                    font-size: 1.1em;
+                    font-weight: bold;
+                    color: #FFFFFF;
+                    margin-right: 10px;
+                }
+                .stMetricValue {
+                    color: """
+            + calls_color
+            + """;
+                    font-weight: bold;
+                }
+            </style>
+        """,
+            unsafe_allow_html=True,
+        )
+
+        remaining_calls_container = st.empty()
+        remaining_calls_container.markdown(
+            f"""
+            <div class="remaining-calls-container">
+                <div class="remaining-calls-text">API Calls Remaining:</div>
+                <div class="stMetric">
+                    <div class="stMetricValue">{remaining_calls}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     st.title("GitHub Issues Similarity Check")
     col1, col2 = st.columns(2)
     unique_pairs = get_unique_owner_repo_pairs(session)
