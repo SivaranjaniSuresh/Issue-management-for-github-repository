@@ -18,29 +18,33 @@ def errorsearch(access_token, user_id):
     remaining_calls = get_remaining_calls(access_token)
     if remaining_calls is not None:
         calls_color = "#228B22" if remaining_calls > 5 else "#D2042D"
-        st.markdown(
-            f"""
+
+        st.write(
+            """
             <style>
-                .remaining-calls-container {{
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    width: 100%;
-                    padding: 10px;
-                    background-color: #f0f0f0;
-                    border-radius: 10px;
-                }}
-                .remaining-calls-text {{
-                    font-size: 1.5em;
+                .remaining-calls-container {
+                    margin-bottom: 20px;
+                }
+                .remaining-calls-text {
+                    font-size: 1.1em;
                     font-weight: bold;
-                    color: #333;
+                    color: #FFFFFF;
                     margin-right: 10px;
-                }}
-                .stMetricValue {{
-                    color: {calls_color};
+                }
+                .stMetricValue {
+                    color: """
+            + calls_color
+            + """;
                     font-weight: bold;
-                }}
+                }
             </style>
+        """,
+            unsafe_allow_html=True,
+        )
+
+        remaining_calls_container = st.empty()
+        remaining_calls_container.markdown(
+            f"""
             <div class="remaining-calls-container">
                 <div class="remaining-calls-text">API Calls Remaining:</div>
                 <div class="stMetric">
