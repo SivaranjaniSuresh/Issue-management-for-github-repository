@@ -12,6 +12,20 @@ PREFIX = os.environ.get("PREFIX")
 
 
 def analytics(access_token, user_id):
+    """
+    Generates analytics based on user activity data retrieved from an API using the provided access token and user ID.
+
+    Parameters:
+    access_token (str): The access token used to authenticate with the API.
+    user_id (str): The user ID associated with the user whose activity data is being retrieved.
+
+    Returns:
+    None: The function generates visualizations of the user activity data using the Streamlit library.
+
+    Raises:
+    HTTPError: An error occurred while retrieving data from the API.
+
+    """
     url = PREFIX + "/user_activity"
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(url, headers=headers)

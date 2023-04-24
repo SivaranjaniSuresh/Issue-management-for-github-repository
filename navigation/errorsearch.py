@@ -14,6 +14,20 @@ PREFIX = os.environ.get("PREFIX")
 
 
 def errorsearch(access_token, user_id):
+    """
+    This function takes in an access token and user id to authorize API calls and allows the user to search for similar
+    issues on Github based on their provided input. If similar issues are found, they are displayed along with their
+    titles, ids, similarity percentage, and urls. If no similar issues are found, a possible solution is provided.
+    The function also displays the remaining number of API calls based on the provided access token.
+
+    Parameters:
+
+    access_token (str): The access token used to authorize API calls.
+    user_id (str): The user id associated with the access token.
+
+    Returns:
+    None
+    """
     headers = {"Authorization": f"Bearer {access_token}"}
     remaining_calls = get_remaining_calls(access_token)
     if remaining_calls is not None:

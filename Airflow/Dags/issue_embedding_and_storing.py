@@ -51,6 +51,15 @@ dag = DAG(
 
 
 def get_owner_repo_pairs_from_snowflake():
+    """
+    Retrieve distinct owner-repo pairs from the GITHUB_ISSUES.PUBLIC.REPO table in Snowflake.
+    
+    Returns:
+    owner_repo_pairs : list of tuples
+        A list of tuples where each tuple represents an owner-repo pair.
+        The first element in the tuple represents the owner of the repository, and the second element
+        represents the name of the repository.
+    """
     query = "SELECT DISTINCT(REPO_OWNER), REPO_NAME FROM GITHUB_ISSUES.PUBLIC.REPO"
     cur = conn.cursor()
     cur.execute(query)
@@ -64,6 +73,17 @@ def get_owner_repo_pairs_from_snowflake():
 
 
 def get_all_issues(owner, repo, access_token):
+    """
+    Fetches all issues from the specified GitHub repository that have been updated since the last time they were retrieved.
+
+    Args:
+        owner (str): The owner of the GitHub repository.
+        repo (str): The name of the GitHub repository.
+        access_token (str): A GitHub access token for authentication.
+
+    Returns:
+        List[Dict]: A list of dictionaries representing the issues, where each dictionary contains the issue's information, such as title, body, comments, and reactions.
+    """
     cursor = conn.cursor()
     result = cursor.execute(
         f"SELECT MAX(UPDATED_AT) FROM GITHUB_ISSUES.PUBLIC.ISSUES WHERE REPO_OWNER='{owner}' AND REPO_NAME='{repo}'"
@@ -127,6 +147,20 @@ def get_all_issues(owner, repo, access_token):
 
 
 def store_issues_in_snowflake(issues, owner, repo):
+    """
+    Store GitHub issues in a Snowflake database.
+
+    Parameters:
+    - issues (list of dicts): A list of dictionaries representing GitHub issues.
+    - owner (str): The owner of the GitHub repository.
+    - repo (str): The name of the GitHub repository.
+
+    Returns:
+    - None
+
+    Raises:
+    - None
+    """
     cursor = conn.cursor()
 
     for issue in issues:
@@ -239,6 +273,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def preprocess_text(text):
+    """
+    Preprocesses a given text by removing URLs and tokenizing it using the BERT tokenizer.
+
+    Parameters:
+    text (str): The text to preprocess.
+
+    Returns:
+    token_ids (list of int): A list of token IDs, where each token corresponds to a word or a subword unit in the text after tokenization.
+    """
     # Remove URLs
     text = re.sub(
         r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
@@ -255,10 +298,35 @@ def preprocess_text(text):
 
 
 def get_issue_embeddings(tokenized_issue_data, max_chunk_size=512):
+    """
+    Given tokenized issue data and a max chunk size, returns a dictionary of issue embeddings.
+    Parameters:
+    -----------
+    tokenized_issue_data : dict
+        A dictionary where keys are issue numbers and values are tokenized issue data.
+    max_chunk_size : int
+        The maximum chunk size for BERT embeddings. Default is 512.
+
+    Returns:
+    --------
+    dict
+        A dictionary where keys are issue numbers and values are corresponding embeddings.
+    """  
     tokenized_texts = list(tokenized_issue_data.values())
     issue_numbers = list(tokenized_issue_data.keys())
 
     def bert_embedding(text):
+        """
+        Given a text, returns the BERT embedding of the text.
+
+        Parameters:
+        text : str
+            The text to get the BERT embedding for.
+
+        Returns:
+        np.ndarray
+            The BERT embedding of the text.
+        """
         if isinstance(text, list):
             text = text[0]
         token_ids = list(map(int, text.split()))
@@ -310,6 +378,15 @@ from pymilvus import (
 
 
 def store_embeddings_in_milvus(issue_embeddings):
+    """
+    Store the issue embeddings in Milvus Vector Database.
+
+    Args:
+        issue_embeddings (dict): A dictionary where the keys are the issue numbers and the values are the embeddings.
+
+    Returns:
+        None
+    """
     data_dict = issue_embeddings
     primary_keys = [key for key in data_dict.keys()]
     vectors = list(data_dict.values())
@@ -385,6 +462,17 @@ def store_embeddings_in_milvus(issue_embeddings):
 
 
 def fetch_and_store_github_issues(owner_repo_pairs, **kwargs):
+    """
+    This function fetches all issues from the GitHub repositories specified in owner_repo_pairs, stores them in Snowflake, and returns a list of the fetched issues.
+
+    Parameters:
+
+    owner_repo_pairs: a list of tuples representing owner and repository names (e.g. [("owner1", "repo1")])
+    **kwargs: optional keyword arguments
+    Returns:
+
+    fetched_issues: a list of dictionaries representing the fetched issues
+    """
     fetched_issues = []
 
     for owner, repo in owner_repo_pairs:
@@ -397,6 +485,15 @@ def fetch_and_store_github_issues(owner_repo_pairs, **kwargs):
 
 
 def compute_embeddings(fetched_issues, **kwargs):
+    """Compute BERT embeddings for the fetched GitHub issues.
+
+    Args:
+        fetched_issues (list): A list of dictionaries containing information about GitHub issues.
+        **kwargs: Other keyword arguments.
+
+    Returns:
+        None.
+    """
     issue_ids = []
     issue_embeddings = {}
 
@@ -416,6 +513,12 @@ def compute_embeddings(fetched_issues, **kwargs):
 
 
 def store_embeddings_in_milvus_task(**kwargs):
+    """
+    Retrieves computed embeddings from task instance XComs and stores them in a Milvus collection.
+
+    :param kwargs: A dictionary of keyword arguments.
+    """
+    
     issue_ids = kwargs["ti"].xcom_pull(key="issue_ids")
     issue_embeddings = {}
     for issue_id in issue_ids:

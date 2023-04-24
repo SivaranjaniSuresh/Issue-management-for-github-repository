@@ -26,8 +26,19 @@ session = SessionLocal()
 tokenizer = AutoTokenizer.from_pretrained("/app/multi-label-class-classification-on-github-issues-tokenizer")
 model = AutoModelForSequenceClassification.from_pretrained("/app/multi-label-class-classification-on-github-issues")
 
-def replace_image_tags_with_images(text):
-    img_tags = re.findall(r'<img[^>]+>', text)
+def replace_image_tags_with_images(text, max_width="100%"):
+    """
+    Replaces HTML image tags with the corresponding markdown image tags with a specified maximum width.
+
+    Parameters:
+
+    text (str): The input text containing HTML image tags.
+    max_width (str): The maximum width of the image in the generated markdown. Defaults to "100%".
+    Returns:
+
+    The input text with HTML image tags replaced by markdown image tags.
+    """
+    img_tags = re.findall(r"<img[^>]+>", text)
 
     for img_tag in img_tags:
         src = re.search(r'src="([^"]+)"', img_tag)
@@ -73,6 +84,16 @@ def display_results(probabilities):
     return top_3_labels
 
 def issuesearch(access_token, user_id):
+    """
+    Searches the GitHub API for all issues associated with the given user_id.
+
+    Parameters:
+        access_token (str): A personal access token for authentication with the GitHub API.
+        user_id (str): The GitHub user ID to search for issues associated with.
+
+    Returns:
+        A list of strings representing the titles of all issues associated with the given user_id.
+    """
     headers = {"Authorization": f"Bearer {access_token}"}
     remaining_calls = get_remaining_calls(access_token)
     if remaining_calls is not None:

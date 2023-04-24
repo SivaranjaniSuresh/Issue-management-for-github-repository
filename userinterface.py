@@ -27,12 +27,26 @@ PREFIX = os.environ.get("PREFIX")
 
 
 def remaining_api_calls(headers):
+    """
+    Sends a GET request to the server to retrieve the remaining number of API calls that can be made with the current API token.
+
+    Parameters:
+    headers (dict): A dictionary containing the headers to be sent with the request, including the API token.
+
+    Returns:
+    int: The remaining number of API calls as reported by the server.
+    """
     response = requests.get(f"{PREFIX}/remaining_api_calls", headers=headers).json()
     remaining_calls = response["remaining_calls"]
     return remaining_calls
 
 
 def signup():
+    """Presents a user interface to sign up for a service, validates user input, and sends the signup data to the server API.
+
+    Returns:
+        None
+    """
     st.title("Sign Up")
     col1, col2 = st.columns(2)
     # Define regular expressions
@@ -124,6 +138,12 @@ def signin():
 
 
 def forget_password():
+    """
+    Displays a Sign In form and sends the user credentials to the authentication API to obtain an access token.
+
+    Returns:
+        str: The access token obtained from the authentication API, or None if the user authentication fails.
+    """
     st.write("Update Password Here")
     password_regex = "^[a-zA-Z0-9]{8,}$"
     username = st.text_input("Enter username")
@@ -146,6 +166,16 @@ def forget_password():
 
 
 def upgrade_subscription(token):
+    """
+    Updates a user's subscription by sending a PUT request to the server.
+
+    Parameters:
+    token : str
+        A string representing the user's authentication token.
+
+    Returns:
+    None
+    """
     headers = {"Authorization": f"Bearer {token}"}
     calls_remaining = remaining_api_calls(headers)
     service = st.selectbox(
