@@ -1,3 +1,3 @@
 # AIssue Flow :zap:
 
-## Abstract :memo: :pencil:
+## Abstract :memo: 
