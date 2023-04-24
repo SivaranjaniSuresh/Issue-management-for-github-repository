@@ -1,10 +1,11 @@
 import os
+from urllib.parse import urlparse
+
+import pandas as pd
 import requests
+import snowflake.connector
 import streamlit as st
 from dotenv import load_dotenv
-import snowflake.connector
-from urllib.parse import urlparse
-import pandas as pd
 
 load_dotenv()
 
@@ -24,6 +25,7 @@ conn = snowflake.connector.connect(
     database=SNOWFLAKE_DATABASE,
     schema=SNOWFLAKE_SCHEMA,
 )
+
 
 def get_repo_table():
     query = "SELECT DISTINCT(REPO_OWNER), REPO_NAME FROM GITHUB_ISSUES.PUBLIC.REPO"
@@ -73,6 +75,7 @@ def center_table_style():
         </style>
     """
 
+
 def generate_html_table(df):
     table_start = "<table>"
     table_end = "</table>"
@@ -85,14 +88,16 @@ def generate_html_table(df):
     )
     return table_start + table_header + table_body + table_end
 
+
 def is_valid_github_link(url, access_token):
     headers = {"Authorization": f"token {access_token}"}
     response = requests.get(url, headers=headers)
     print(response.status_code)
     if response.status_code == 200:
-        return 'Success'
+        return "Success"
     else:
-        return 'Fail'
+        return "Fail"
+
 
 def get_repo_info(github_link, access_token):
     api_url = "https://api.github.com/repos/"
@@ -101,7 +106,7 @@ def get_repo_info(github_link, access_token):
         "Authorization": f"token {access_token}",
         "Accept": "application/vnd.github+json",
     }
-    
+
     full_path = api_url + repo_path
     response = requests.get(full_path, headers=headers)
     print(response.status_code)
@@ -112,12 +117,16 @@ def get_repo_info(github_link, access_token):
     else:
         return None
 
+
 def insert_repo(repo_owner, repo_name):
-    query = "INSERT INTO GITHUB_ISSUES.PUBLIC.REPO (REPO_OWNER, REPO_NAME) VALUES (%s, %s)"
+    query = (
+        "INSERT INTO GITHUB_ISSUES.PUBLIC.REPO (REPO_OWNER, REPO_NAME) VALUES (%s, %s)"
+    )
     cursor = conn.cursor()
     cursor.execute(query, (repo_owner, repo_name))
     conn.commit()
     cursor.close()
+
 
 def repo_exists(repo_owner, repo_name):
     query = "SELECT COUNT(*) FROM GITHUB_ISSUES.PUBLIC.REPO WHERE REPO_OWNER = %s AND REPO_NAME = %s"
@@ -127,15 +136,16 @@ def repo_exists(repo_owner, repo_name):
     cursor.close()
     return result > 0
 
+
 def adminworkarea(access_token, user_id):
     st.title("Knowledge Base")
-    
+
     # Add the center table style
     st.markdown(center_table_style(), unsafe_allow_html=True)
-    
+
     # Get the dataframe
     repo_df = get_repo_table()
-    
+
     # Display the table without the index column
     st.markdown(generate_html_table(repo_df), unsafe_allow_html=True)
 
@@ -148,7 +158,7 @@ def adminworkarea(access_token, user_id):
     if st.button("Add repo"):
         validity_check = is_valid_github_link(github_link, git_access_token)
         print(validity_check)
-        if validity_check=='Success':
+        if validity_check == "Success":
             repo_info = get_repo_info(github_link, git_access_token)
             if repo_info:
                 repo_owner, repo_name = repo_info
@@ -159,7 +169,8 @@ def adminworkarea(access_token, user_id):
                 else:
                     st.error("Repository already exists in the table.")
             else:
-                st.error("Unable to extract repository information from the link. Please provide a valid link.")
+                st.error(
+                    "Unable to extract repository information from the link. Please provide a valid link."
+                )
         else:
             st.error("Invalid GitHub repo link. Please provide a valid link.")
-
