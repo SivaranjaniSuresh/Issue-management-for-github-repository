@@ -1,7 +1,5 @@
 import os
 import re
-import snowflake
-import snowflake.connector
 
 import requests
 import streamlit as st
