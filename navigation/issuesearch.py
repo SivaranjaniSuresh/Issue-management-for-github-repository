@@ -135,7 +135,6 @@ def issuesearch(access_token, user_id):
     if issues:
         st.write(f"**Open Issues for {selected_owner}/{selected_repo} (Page {page}):**")
         # Initialize a dictionary to store labeled issues
-        labeled_issues = {}
         for issue in issues:
             issue_id = issue["id"]
             issue_title = issue["title"]
@@ -143,21 +142,25 @@ def issuesearch(access_token, user_id):
             issue_comments = issue["comments_data"]
             with st.expander(issue_title):
                 # Check if the issue has already been labeled
-                if issue_id not in labeled_issues:
+                label_key = f"label_{issue['number']}"
+                if st.session_state.get(label_key):
+                    if st.session_state[label_key] is not None:
+                        label_text = " ".join([f"<code style='background-color: #191D20; color: #228B22; padding: 6px 12px;'>{label}</code>" for label, _ in st.session_state[label_key]])
+                    else:
+                        label_text = ""
+                    st.markdown(f"Possible Labels: {label_text}", unsafe_allow_html=True)
+                else:
                     probabilities = classify_issue(issue["body"])
                     if probabilities is not None:
                         top_3_labels = display_results(probabilities * 100)
-                        labeled_issues[issue_id] = top_3_labels
                     else:
-                        labeled_issues[issue_id] = None
-                # Fetch the labels from the labeled_issues dictionary
-                top_3_labels = labeled_issues[issue_id]
-                
-                if top_3_labels is not None:
-                    label_text = " ".join([f"<code style='background-color: #191D20; color: #228B22; padding: 6px 12px;'>{label}</code>" for label, _ in top_3_labels])
-                else:
-                    label_text = ""
-                st.markdown(f"Possible Labels: {label_text}", unsafe_allow_html=True)
+                        top_3_labels = None
+                    st.session_state[label_key] = top_3_labels
+                    if top_3_labels is not None:
+                        label_text = " ".join([f"<code style='background-color: #191D20; color: #228B22; padding: 6px 12px;'>{label}</code>" for label, _ in top_3_labels])
+                    else:
+                        label_text = ""
+                    st.markdown(f"Possible Labels: {label_text}", unsafe_allow_html=True)
                 st.markdown("<hr>", unsafe_allow_html=True)
                 if issue_body is not None:
                     issue_body_with_images = replace_image_tags_with_images(issue_body)
