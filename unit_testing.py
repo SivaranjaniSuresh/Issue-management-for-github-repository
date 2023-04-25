@@ -2,7 +2,6 @@ from unittest.mock import MagicMock
 import pytest
 import requests_mock
 import os
-from dotenv import load_dotenv
 import snowflake.connector
 
 from utils.core_helpers import (
@@ -10,8 +9,6 @@ from utils.core_helpers import (
     get_open_issues,
     get_unique_owner_repo_pairs,
 )
-
-load_dotenv()
 
 SNOWFLAKE_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT")
 SNOWFLAKE_USER = os.environ.get("SNOWFLAKE_USER")
