@@ -1,10 +1,10 @@
+import json
 import os
 import re
 
 import requests
 import streamlit as st
 from dotenv import load_dotenv
-import json
 
 from backend.database import SessionLocal
 from utils.core_helpers import (
@@ -19,6 +19,7 @@ GITHUB_ACCESS_TOKEN = os.environ.get("access_token")
 PREFIX = os.environ.get("PREFIX")
 
 session = SessionLocal()
+
 
 def replace_image_tags_with_images(text, max_width="100%"):
     """
@@ -42,6 +43,7 @@ def replace_image_tags_with_images(text, max_width="100%"):
             text = text.replace(img_tag, img_markdown)
 
     return text
+
 
 def issuesearch(access_token, user_id):
     """
@@ -126,12 +128,18 @@ def issuesearch(access_token, user_id):
                     issue_body_with_images = replace_image_tags_with_images(issue_body)
                 else:
                     issue_body_with_images = ""
-                st.markdown(f"<div style='overflow: auto;'>{issue_body_with_images}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<div style='overflow: auto;'>{issue_body_with_images}</div>",
+                    unsafe_allow_html=True,
+                )
                 st.markdown("<hr>", unsafe_allow_html=True)
                 st.write("Comments:")
                 if issue_comments:
                     for comment in issue_comments:
-                        st.markdown(f"<span style='color: #800080'>{comment['user']['login']}:</span>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<span style='color: #800080'>{comment['user']['login']}:</span>",
+                            unsafe_allow_html=True,
+                        )
                         st.write(comment["body"])
                 else:
                     st.write("No Comments.")
@@ -270,4 +278,7 @@ def issuesearch(access_token, user_id):
 
 
 if __name__ == "__main__":
-    issuesearch()
+    try:
+        issuesearch()
+    finally:
+        session.close()
