@@ -22,10 +22,6 @@ PREFIX = os.environ.get("PREFIX")
 
 session = SessionLocal()
 
-# Set up the model
-tokenizer = AutoTokenizer.from_pretrained("/app/multi-label-class-classification-on-github-issues-tokenizer")
-model = AutoModelForSequenceClassification.from_pretrained("/app/multi-label-class-classification-on-github-issues")
-
 def replace_image_tags_with_images(text, max_width="100%"):
     """
     Replaces HTML image tags with the corresponding markdown image tags with a specified maximum width.
@@ -48,40 +44,6 @@ def replace_image_tags_with_images(text, max_width="100%"):
             text = text.replace(img_tag, img_markdown)
 
     return text
-
-# Classify an issue using the model
-def classify_issue(issue_text):
-    if not issue_text:
-        return None
-    inputs = tokenizer(issue_text, return_tensors="pt", truncation=True, padding=True)
-    with torch.no_grad():
-        outputs = model(**inputs)
-    logits = outputs.logits
-    probabilities = torch.sigmoid(logits)
-    return probabilities.numpy().flatten()
-
-def display_results(probabilities):
-    if probabilities is None:
-        return []
-    label_list = [
-    "accessibility", "android", "api", "app", "architecture", "assets", "authentication",
-    "automated-tests", "backend", "blog", "bootstrap", "bug", "chat", "chrome-extension",
-    "ci", "clean-code", "code-coverage", "community", "compliance", "console", "css", "data",
-    "database", "dependencies", "design", "devops", "documentation", "docker", "e2e-testing",
-    "easy-pick", "editor", "enhancement", "error-handling", "feature", "frontend", "git",
-    "github-actions", "graphql", "hacktoberfest", "help-wanted", "html", "http", "i18n",
-    "infrastructure", "installation", "integration-tests", "ios", "javascript", "jest",
-    "jquery", "json", "linting", "logging", "macos", "machine-learning", "maintenance",
-    "markdown", "mobile", "monitoring", "new-feature", "node.js", "optimization", "package",
-    "performance", "php", "plugin", "pwa", "python", "question", "rails", "react", "reproducible-builds",
-    "rest-api", "ruby", "scala", "search", "security", "serverless", "setup", "storybook",
-    "testing", "translation", "typescript", "ui", "usability", "user-experience", "visualization",
-    "vue.js", "windows", "workflow", "yaml"
-    ]
-    label_probs = list(zip(label_list, probabilities))
-    label_probs.sort(key=lambda x: x[1], reverse=True)
-    top_3_labels = label_probs[:3]
-    return top_3_labels
 
 def issuesearch(access_token, user_id):
     """
@@ -162,27 +124,6 @@ def issuesearch(access_token, user_id):
             issue_body = issue["body"]
             issue_comments = issue["comments_data"]
             with st.expander(issue_title):
-                # Check if the issue has already been labeled
-                label_key = f"label_{issue['number']}"
-                if st.session_state.get(label_key):
-                    if st.session_state[label_key] is not None:
-                        label_text = " ".join([f"<code style='background-color: #191D20; color: #228B22; padding: 6px 12px;'>{label}</code>" for label, _ in st.session_state[label_key]])
-                    else:
-                        label_text = ""
-                    st.markdown(f"Possible Labels: {label_text}", unsafe_allow_html=True)
-                else:
-                    probabilities = classify_issue(issue["body"])
-                    if probabilities is not None:
-                        top_3_labels = display_results(probabilities * 100)
-                    else:
-                        top_3_labels = None
-                    st.session_state[label_key] = top_3_labels
-                    if top_3_labels is not None:
-                        label_text = " ".join([f"<code style='background-color: #191D20; color: #228B22; padding: 6px 12px;'>{label}</code>" for label, _ in top_3_labels])
-                    else:
-                        label_text = ""
-                    st.markdown(f"Possible Labels: {label_text}", unsafe_allow_html=True)
-                st.markdown("<hr>", unsafe_allow_html=True)
                 if issue_body is not None:
                     issue_body_with_images = replace_image_tags_with_images(issue_body)
                 else:

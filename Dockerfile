@@ -19,9 +19,6 @@ ADD backend/database.py /app/backend/
 ADD utils /app/utils/
 ADD utils/core_helpers.py /app/utils/
 
-COPY ./multi-label-class-classification-on-github-issues /app/multi-label-class-classification-on-github-issues
-COPY ./multi-label-class-classification-on-github-issues-tokenizer /app/multi-label-class-classification-on-github-issues-tokenizer
-
 EXPOSE 8080
 
 CMD ["streamlit", "run", "userinterface.py", "--server.port", "8080"]
