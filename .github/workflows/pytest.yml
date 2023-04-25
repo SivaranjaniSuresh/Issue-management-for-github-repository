@@ -1,0 +1,25 @@
+name: Continuous Integration - Unit Testing
+
+on:  
+  push:
+    branches:
+      - lokesh
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.10.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10.9
+          cache: pip
+
+      - name: Install requirement
+        run: pip install -r pyrequirements.txt    
+
+      - name: Run tests
+        run: pytest -v -ra --disable-warnings unit_testing.py
