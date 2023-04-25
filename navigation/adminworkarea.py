@@ -28,7 +28,6 @@ conn = snowflake.connector.connect(
 
 
 def get_repo_table():
-
     """
     This function retrieves a list of distinct repository owners and their corresponding repository names from a database table
     named 'GITHUB_ISSUES.PUBLIC.REPO'. It uses a SQL query to fetch the required data, creates a pandas DataFrame from the
@@ -39,7 +38,7 @@ def get_repo_table():
     repository owner and repository name combinations in the 'GITHUB_ISSUES.PUBLIC.REPO' table.
 
     """
-    
+
     query = "SELECT DISTINCT(REPO_OWNER), REPO_NAME FROM GITHUB_ISSUES.PUBLIC.REPO"
     cursor = conn.cursor()
     cursor.execute(query)
@@ -50,7 +49,6 @@ def get_repo_table():
 
 
 def center_table_style():
-    
     return """
         <style>
             table {
@@ -92,14 +90,14 @@ def center_table_style():
 def generate_html_table(df):
     """
     This function takes a pandas DataFrame as input and generates an HTML table that displays the contents of the DataFrame.
-    
+
     Args:
         - df (pandas.DataFrame): The DataFrame to be displayed in the HTML table.
-        
+
     Returns:
-        - str: A string of HTML code that represents an HTML table displaying the contents of the input DataFrame.    
+        - str: A string of HTML code that represents an HTML table displaying the contents of the input DataFrame.
     """
-    
+
     table_start = "<table>"
     table_end = "</table>"
     table_header = "<tr>" + "".join([f"<th>{col}</th>" for col in df.columns]) + "</tr>"
@@ -115,13 +113,13 @@ def generate_html_table(df):
 def is_valid_github_link(url, access_token):
     """
     This function checks if a given GitHub URL is valid and accessible using a valid access token. It sends a GET request
-    to the URL using the access token provided in the headers, and returns "Success" if the status code of the response 
+    to the URL using the access token provided in the headers, and returns "Success" if the status code of the response
     is 200 (OK), indicating that the URL is valid and accessible, and "Fail" otherwise.
-    
+
     Args:
         - url (str): The GitHub URL to be checked.
         - access_token (str): A valid access token to authenticate the request.
-        
+
     Returns:
         - str: "Success" if the URL is valid and accessible using the access token, and "Fail" otherwise.
     """
@@ -136,16 +134,16 @@ def is_valid_github_link(url, access_token):
 
 def get_repo_info(github_link, access_token):
     """
-    This function retrieves the owner login and name of a GitHub repository using its URL and a valid access token. It 
-    sends a GET request to the GitHub API using the URL and access token provided in the headers, and returns a tuple 
+    This function retrieves the owner login and name of a GitHub repository using its URL and a valid access token. It
+    sends a GET request to the GitHub API using the URL and access token provided in the headers, and returns a tuple
     containing the owner login and name if the request is successful (status code 200), and None otherwise.
-    
+
     Args:
         - github_link (str): The URL of the GitHub repository.
         - access_token (str): A valid access token to authenticate the request.
-        
+
     Returns:
-        - tuple or None: A tuple containing the owner login and name of the GitHub repository if the request is 
+        - tuple or None: A tuple containing the owner login and name of the GitHub repository if the request is
         successful, and None otherwise.
     """
     api_url = "https://api.github.com/repos/"
@@ -168,13 +166,13 @@ def get_repo_info(github_link, access_token):
 
 def insert_repo(repo_owner, repo_name):
     """
-    This function inserts a new record into the 'GITHUB_ISSUES.PUBLIC.REPO' table in the database, with the given 
+    This function inserts a new record into the 'GITHUB_ISSUES.PUBLIC.REPO' table in the database, with the given
     repository owner and name.
-    
+
     Args:
         - repo_owner (str): The owner of the repository.
         - repo_name (str): The name of the repository.
-        
+
     Returns:
         - None
     """
@@ -189,14 +187,14 @@ def insert_repo(repo_owner, repo_name):
 
 def repo_exists(repo_owner, repo_name):
     """
-    This function checks if a repository with a given owner and name exists in the database. It sends a SELECT query 
-    to the database using the owner and name as parameters, and returns True if there is at least one row in the result 
+    This function checks if a repository with a given owner and name exists in the database. It sends a SELECT query
+    to the database using the owner and name as parameters, and returns True if there is at least one row in the result
     set, indicating that the repository exists, and False otherwise.
-    
+
     Args:
         - repo_owner (str): The owner login of the GitHub repository.
         - repo_name (str): The name of the GitHub repository.
-        
+
     Returns:
         - bool: True if the repository exists in the database, and False otherwise.
     """

@@ -53,7 +53,7 @@ dag = DAG(
 def get_owner_repo_pairs_from_snowflake():
     """
     Retrieve distinct owner-repo pairs from the GITHUB_ISSUES.PUBLIC.REPO table in Snowflake.
-    
+
     Returns:
     owner_repo_pairs : list of tuples
         A list of tuples where each tuple represents an owner-repo pair.
@@ -311,7 +311,7 @@ def get_issue_embeddings(tokenized_issue_data, max_chunk_size=512):
     --------
     dict
         A dictionary where keys are issue numbers and values are corresponding embeddings.
-    """  
+    """
     tokenized_texts = list(tokenized_issue_data.values())
     issue_numbers = list(tokenized_issue_data.keys())
 
@@ -518,7 +518,7 @@ def store_embeddings_in_milvus_task(**kwargs):
 
     :param kwargs: A dictionary of keyword arguments.
     """
-    
+
     issue_ids = kwargs["ti"].xcom_pull(key="issue_ids")
     issue_embeddings = {}
     for issue_id in issue_ids:
