@@ -270,4 +270,7 @@ def issuesearch(access_token, user_id):
 
 
 if __name__ == "__main__":
-    issuesearch()
+    try:
+        issuesearch()
+    finally:
+        session.close()

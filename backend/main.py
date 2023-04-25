@@ -37,18 +37,18 @@ models.Base.metadata.create_all(engine)
 
 # For Local
 ####################################################################################################################################
-#tokenizer = BertTokenizer.from_pretrained(
-#    "./bert-base-uncased-tokenizer", max_length=1024
-#)
-#model = BertModel.from_pretrained("./bert-base-uncased")
+tokenizer = BertTokenizer.from_pretrained(
+   "./bert-base-uncased-tokenizer", max_length=1024
+)
+model = BertModel.from_pretrained("./bert-base-uncased")
 ####################################################################################################################################
 
 #For Global
 #####################################################################################################################################
-tokenizer = BertTokenizer.from_pretrained(
-     "/app/bert-base-uncased-tokenizer", max_length=1024
-)
-model = BertModel.from_pretrained("/app/bert-base-uncased")
+# tokenizer = BertTokenizer.from_pretrained(
+#      "/app/bert-base-uncased-tokenizer", max_length=1024
+# )
+# model = BertModel.from_pretrained("/app/bert-base-uncased")
 #####################################################################################################################################
 
 model.eval()
