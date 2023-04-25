@@ -5,8 +5,6 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 import json
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 from backend.database import SessionLocal
 from utils.core_helpers import (
