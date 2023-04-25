@@ -1,7 +1,13 @@
+from unittest.mock import MagicMock
+
 import pytest
 import requests_mock
-from unittest.mock import MagicMock
-from utils.core_helpers import get_open_issues, get_unique_owner_repo_pairs, get_issue_comments
+
+from utils.core_helpers import (
+    get_issue_comments,
+    get_open_issues,
+    get_unique_owner_repo_pairs,
+)
 
 
 def test_get_open_issues_success():
@@ -104,6 +110,7 @@ def test_get_unique_owner_repo_pairs_empty_result():
     )
     mock_result.fetchall.assert_called_once()
     assert result == []
+
 
 def test_get_issue_comments_success():
     issue_url = "https://api.github.com/repos/test_owner/test_repo/issues/1/comments"
