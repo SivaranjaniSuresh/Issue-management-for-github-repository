@@ -56,7 +56,6 @@ The data source for this project is the GitHub API, which provides access to all
 
 <img width="607" alt="image" src="https://user-images.githubusercontent.com/114537365/234988315-a9f89c76-b0ac-413c-9f4b-977eb7c5eab9.png">
 
-![image] (https://github-readme-stats.vercel.app/api/top-langs/?username={BigDataIA-Spring2023-Team-04})
 
 ## Requirements
 
@@ -186,3 +185,15 @@ docker-compose up
 8. Access the Streamlit UI by navigating to http://localhost:8501/ in your web browser.
 
 9. Enter GitHub username and select a repository from the dropdown menu to view the issues associated with that repository. You can summarize or find similar issues using the options provided on the UI.
+
+
+## Team Information and Contribution 
+
+Name | NUID | Contribution 
+--- | --- | --- |
+Karan Agrawal | 001090008 | 25% 
+Lokeshwaran Venugopal Balamurugan | 002990533 | 25% 
+Sivaranjani S | 002742197 | 25% 
+Rishabh Singh | 002743830 | 25% 
+
+
