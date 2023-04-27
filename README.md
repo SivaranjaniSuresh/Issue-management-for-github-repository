@@ -18,7 +18,7 @@ The use case for this project could be to help software developers and teams bet
 
 The data source for this project is the GitHub API, which provides access to all the issue-related data for public repositories. 
 
-## Process Outline:
+## Process Outline
 
 1. Data Collection: Use GitHub API to extract issue-related data from various repositories and store it in a Snowflake database.
 2. Data Preprocessing: Clean and preprocess the collected data to make it suitable for analysis.
