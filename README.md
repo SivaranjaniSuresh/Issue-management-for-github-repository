@@ -30,6 +30,25 @@ The data source for this project is the GitHub API, which provides access to all
 8. Testing: Use pytest for unit testing to ensure the functionality of the application and its components.
 9. Deployment: Host the application in cloud and deploy it using Airflow and a GCP instance.
 
+## Requirements
+
+fastapi==0.92.0
+passlib==1.7.4
+pydantic==1.10.4
+python-dotenv==1.0.0
+python-jose==3.3.0
+snowflake-connector-python==3.0.2
+snowflake-sqlalchemy==1.4.7
+:open_file_folder: SQLAlchemy==1.4.47
+gunicorn==20.1.0
+uvicorn==0.20.0
+python-multipart
+🔢 numpy==1.23.5
+openai==0.27.0
+pymilvus==2.2.6
+transformers==4.27.4
+🖼streamlit==1.18.1
+
 
 
 
