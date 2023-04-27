@@ -1,4 +1,4 @@
-# AIssue Flow :zap:
+# AIssue Flow :zap: [![Continuous Integration - Unit Testing](https://github.com/BigDataIA-Spring2023-Team-04/Final-Project-Playground/actions/workflows/pytest.yml/badge.svg?branch=main)](https://github.com/BigDataIA-Spring2023-Team-04/Final-Project-Playground/actions/workflows/pytest.yml)
 
 ## Abstract :memo: 
 
