@@ -42,7 +42,7 @@ The data source for this project is the GitHub API, which provides access to all
 
 ## Process Outline
 
-1. Data Collection: Use GitHub API to extract issue-related data from various repositories and store it in a Snowflake database.
+**1. Data Collection:** Use GitHub API to extract issue-related data from various repositories and store it in a Snowflake database.
 2. Data Preprocessing: Clean and preprocess the collected data to make it suitable for analysis.
 3. Feature Extraction: Use the BERT model to extract vector embeddings from the issue body text.
 4. Data Validation: Use Great Expectations to validate the collected data and ensure it meets the expected format and values.
