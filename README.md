@@ -186,6 +186,11 @@ docker-compose up
 
 9. Enter GitHub username and select a repository from the dropdown menu to view the issues associated with that repository. You can summarize or find similar issues using the options provided on the UI.
 
+## Github Actions - Testing
+
+<img width="1512" alt="image" src="https://user-images.githubusercontent.com/114537365/235001553-2dc11cd4-9131-48d2-a57b-75b302aeb372.png">
+
+
 
 ## Team Information and Contribution 
 
