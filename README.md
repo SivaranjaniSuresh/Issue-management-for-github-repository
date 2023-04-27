@@ -2,7 +2,7 @@
 
 ## Abstract :memo: 
 
-## Project Goals:
+## Project Goals
 
 1. Scrape issue-related data from various GitHub repositories using the GitHub API and store it in a Snowflake database along with associated metadata.
 2. Use the BERT model to convert issue bodies into vector embeddings and store them in a Milvus database for efficient similarity search.
