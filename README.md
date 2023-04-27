@@ -148,27 +148,27 @@ To run the application locally, follow these steps:
 
 3. Create a .env file in the root directory with the following variables:
 
-GITHUB_API_TOKEN: your GitHub API token.
+  GITHUB_API_TOKEN: your GitHub API token.
 
-SNOWFLAKE_USER: your Snowflake username.
+  SNOWFLAKE_USER: your Snowflake username.
 
-SNOWFLAKE_PASSWORD: your Snowflake password.
+  SNOWFLAKE_PASSWORD: your Snowflake password.
 
-SNOWFLAKE_ACCOUNT: your Snowflake account name.
+  SNOWFLAKE_ACCOUNT: your Snowflake account name.
 
-SNOWFLAKE_DATABASE: the name of the Snowflake database to use.
+  SNOWFLAKE_DATABASE: the name of the Snowflake database to use.
 
-SNOWFLAKE_SCHEMA: the name of the Snowflake schema to use.
+  SNOWFLAKE_SCHEMA: the name of the Snowflake schema to use.
 
-ACESS_TOKEN:
+  ACESS_TOKEN:
 
-SECRET_KEY:
+  SECRET_KEY:
 
-ALGORITHM:
+  ALGORITHM:
 
-ACCESS_TOKEN_EXPIRE_MINUTES:
+  ACCESS_TOKEN_EXPIRE_MINUTES:
 
-OPENAI_API_KEY:
+  OPENAI_API_KEY:
 
 4. Once you have set up your environment variables, start Airflow by running the following command from the root directory:
 csharp
