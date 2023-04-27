@@ -52,6 +52,11 @@ The data source for this project is the GitHub API, which provides access to all
 8. Testing: Use pytest for unit testing to ensure the functionality of the application and its components.
 9. Deployment: Host the application in cloud and deploy it using Airflow and a GCP instance.
 
+## Project Setup
+
+<img width="607" alt="image" src="https://user-images.githubusercontent.com/114537365/234988315-a9f89c76-b0ac-413c-9f4b-977eb7c5eab9.png">
+
+
 ## Requirements
 
 fastapi==0.92.0
