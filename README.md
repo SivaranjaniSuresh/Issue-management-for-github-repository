@@ -56,6 +56,7 @@ The data source for this project is the GitHub API, which provides access to all
 
 <img width="607" alt="image" src="https://user-images.githubusercontent.com/114537365/234988315-a9f89c76-b0ac-413c-9f4b-977eb7c5eab9.png">
 
+![image] (https://github-readme-stats.vercel.app/api/top-langs/?username={username})
 
 ## Requirements
 
