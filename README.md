@@ -2,7 +2,7 @@
 
 ## Abstract :memo: 
 
-## Project Goals
+## Project Goals :dart:
 
 1. Scrape issue-related data from various GitHub repositories using the GitHub API and store it in a Snowflake database along with associated metadata.
 2. Use the BERT model to convert issue bodies into vector embeddings and store them in a Milvus database for efficient similarity search.
@@ -10,11 +10,11 @@
 4. Use the ChatGPT model to summarize issues and leverage Milvus to find similar issues for the selected issue.
 5. If no similar issues are found, provide assistance to the user through the GPT Intelligent Chatbot to find potential solutions to the issue.
 
-## Use case
+## Use case :bookmark_tabs:
 
 The use case for this project could be to help software developers and teams better manage their projects on GitHub. By using the GitHub API to scrape issue-related data, storing it in a database, and leveraging advanced NLP and vector similarity algorithms, developers can more easily search for and find relevant issues, as well as summarize them for quicker understanding. This can lead to faster issue resolution and more efficient project management overall.
 
-## Technologies Used
+## Technologies Used :computer:
 
 ![image](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
 
@@ -36,7 +36,7 @@ The use case for this project could be to help software developers and teams bet
 
 ![image](https://img.shields.io/badge/Github%20Actions-282a2e?style=for-the-badge&logo=githubactions&logoColor=367cfe)
 
-## Data Source
+## Data Source :flashlight:
 
 The data source for this project is the GitHub API, which provides access to all the issue-related data for public repositories. 
 
