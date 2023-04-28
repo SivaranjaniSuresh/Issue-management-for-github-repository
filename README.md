@@ -24,13 +24,17 @@
 
 ## Abstract :memo: 
 
+The rapid growth of software development projects on GitHub necessitates efficient and intelligent issue management solutions. AIssueFlow is a novel, real-time adaptive intelligence system designed to streamline the process of managing GitHub issues. The system retrieves open issues in real-time and employs a pre-trained BERT model to generate embeddings, which are then stored in a Snowflake database. By leveraging the Milvus similarity search engine, AIssueFlow identifies and returns similar issues, enabling the scrum master to make informed assignment decisions based on developers' domain expertise.
+
+Furthermore, AIssueFlow features an analytics page, providing users with insights into their API usage history, and an admin page, allowing administrators to add repositories to the system. This comprehensive solution not only enhances issue management efficiency but also promotes better collaboration and productivity within software development teams. Through the integration of state-of-the-art technologies, such as BERT embeddings, Milvus similarity search, and Snowflake storage, AIssueFlow represents the next generation of intelligent GitHub issue management.
+
 ## Project Goals :dart:
 
 1. Scrape issue-related data from various GitHub repositories using the GitHub API and store it in a Snowflake database along with associated metadata.
 2. Use the BERT model to convert issue bodies into vector embeddings and store them in a Milvus database for efficient similarity search.
 3. Develop two main functions, Git Magnet and Git Cognizant, to make the project more user-friendly.
-4. Use the ChatGPT model to summarize issues and leverage Milvus to find similar issues for the selected issue.
-5. If no similar issues are found, provide assistance to the user through the GPT Intelligent Chatbot to find potential solutions to the issue.
+4. Use the GPT 3.5 Turbo model to summarize issues and leverage Milvus to find similar issues for the selected issue.
+5. If no similar issues are found, provide assistance to the user through the GPT 3.5 Turbo to find potential solutions to the issue, using prompt enginerring.
 
 ## Use case :bookmark_tabs:
 
