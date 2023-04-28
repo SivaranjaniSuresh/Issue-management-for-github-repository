@@ -159,11 +159,11 @@ To run the application locally, follow these steps:
 
     SNOWFLAKE_SCHEMA: the name of the Snowflake schema to use.
 
-    ACESS_TOKEN:
+    ACESS_TOKEN: Your Github Acess token
 
-    SECRET_KEY:
+    SECRET_KEY: "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7" - for JWT Hashing
 
-    ALGORITHM:
+    ALGORITHM: "HS256" - - for JWT Hashing
 
     ACCESS_TOKEN_EXPIRE_MINUTES: The expiration time of the access token in minutes
 
