@@ -1,6 +1,9 @@
 # AIssue Flow :zap: [![Continuous Integration - Unit Testing](https://github.com/BigDataIA-Spring2023-Team-04/Final-Project-Playground/actions/workflows/pytest.yml/badge.svg?branch=main)](https://github.com/BigDataIA-Spring2023-Team-04/Final-Project-Playground/actions/workflows/pytest.yml)
 
 ## Live application Links :octopus:
+
+- Please use this application responsibly, as we have limited free credits remaining.
+
 [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)](http://34.148.167.159:8051/)
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=FastAPI&logoColor=white)](http://34.148.167.159:8050/docs)
