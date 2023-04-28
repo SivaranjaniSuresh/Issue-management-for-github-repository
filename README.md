@@ -120,17 +120,18 @@ transformers==4.27.4
 ## Project Folder Structure
 
 ```
-📦 
-├─ .DS_Store
+📦 Final-Project-Playground
 ├─ .github
 │  └─ workflows
 │     └─ pytest.yml
 ├─ .gitignore
 ├─ Airflow
 │  └─ Dags
+│     ├─ README.md
+│     ├─ db_update.py
+│     ├─ ge_report.py
 │     └─ issue_embedding_and_storing.py
 ├─ Dockerfile
-├─ Milvus_Testing.ipynb
 ├─ README.md
 ├─ __init__.py
 ├─ backend
@@ -145,7 +146,20 @@ transformers==4.27.4
 │  └─ schema.py
 ├─ bert_download.py
 ├─ docker-compose.yml
-├─ docker_tag.txt
+├─ great_expectations
+│  ├─ .gitignore
+│  ├─ README.md
+│  ├─ checkpoints
+│  │  ├─ github_issues_checkpoint_v0.yml
+│  │  └─ github_issues_checkpoint_v1.yml
+│  ├─ expectations
+│  │  ├─ .ge_store_backend_id
+│  │  └─ github_issues_suite.json
+│  ├─ great_expectations.yml
+│  └─ plugins
+│     └─ custom_data_docs
+│        └─ styles
+│           └─ data_docs_custom_styles.css
 ├─ navigation
 │  ├─ __init__.py
 │  ├─ adminworkarea.py
