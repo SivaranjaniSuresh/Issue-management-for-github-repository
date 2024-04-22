@@ -37,6 +37,7 @@ The use case for this project is to develop a mental health platform that levera
 [![Snowflake](https://img.shields.io/badge/Snowflake-0093F1?style=for-the-badge&logo=snowflake&logoColor=white)](https://www.snowflake.com/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-7289DA?style=for-the-badge&logo=chromadb&logoColor=white)](https://www.chromadb.com/)
 [![DeepEval](https://img.shields.io/badge/DeepEval-000000?style=for-the-badge&logo=deepeval&logoColor=white)](https://deepeval.com/)
+[![Google Calendar](https://img.shields.io/badge/Google_Calendar-4285F4?style=for-the-badge&logo=google-calendar&logoColor=white)](https://calendar.google.com/)
 
 ## Data Source 📚
 
