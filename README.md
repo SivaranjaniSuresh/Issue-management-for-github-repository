@@ -20,7 +20,7 @@
 
 ## Use Case 📖
 
-The use case for this project is to develop a mental health platform that leverages conversation AI based on Retrieval-augmented generation (RAG) to offer users a supportive and non-judgmental space, fostering emotional well-being and personal introspection. 🧠💞
+The use case for this project is to develop a mental health platform that leverages conversation AI based on Retrieval-augmented generation (RAG) to offer users a supportive and non-judgmental space, fostering emotional well-being and personal introspection. 🧠
 
 ## Technologies Used 🛠️
 
@@ -29,7 +29,14 @@ The use case for this project is to develop a mental health platform that levera
 [![Python](https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue)](https://www.python.org/)
 [![Pandas](https://img.shields.io/badge/Pandas-2C2D72?style=for-the-badge&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
 [![NumPy](https://img.shields.io/badge/Numpy-777BB4?style=for-the-badge&logo=numpy&logoColor=white)](https://numpy.org/)
-[![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=dbt&logoColor=white)]
+[![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=dbt&logoColor=white)](https://www.getdbt.com/)
+[![LangChain](https://img.shields.io/badge/LangChain-FF9900?style=for-the-badge&logo=langchain&logoColor=white)](https://python.langchain.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
+[![Dagster](https://img.shields.io/badge/Dagster-F23FC5?style=for-the-badge&logo=dagster&logoColor=white)](https://dagster.io/)
+[![Cohere](https://img.shields.io/badge/Cohere-000000?style=for-the-badge&logo=cohere&logoColor=white)](https://cohere.ai/)
+[![Snowflake](https://img.shields.io/badge/Snowflake-0093F1?style=for-the-badge&logo=snowflake&logoColor=white)](https://www.snowflake.com/)
+[![ChromaDB](https://img.shields.io/badge/ChromaDB-7289DA?style=for-the-badge&logo=chromadb&logoColor=white)](https://www.chromadb.com/)
+[![DeepEval](https://img.shields.io/badge/DeepEval-000000?style=for-the-badge&logo=deepeval&logoColor=white)](https://deepeval.com/)
 
 ## Data Source 📚
 
